@@ -1,0 +1,45 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    restart: on-failure
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: pact-db
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - pact-network
+
+  pact:
+    container_name: pact
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pact-db
+      DB_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - pact-network
+
+volumes:
+  postgres-data:
+
+networks:
+  pact-network:
+    driver: bridge

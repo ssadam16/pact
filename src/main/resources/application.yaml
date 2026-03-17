@@ -1,0 +1,40 @@
+logging:
+  level:
+    ru.varyainc.platforma: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.transaction.interceptor: TRACE
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: Pact
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/pact-db
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    schemas: public
+    default-schema: public
