@@ -20,25 +20,48 @@ services:
     networks:
       - pact-network
 
-  pact:
-    container_name: pact
-    build:
-      context: .
-      dockerfile: Dockerfile
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: pact-minio
+    restart: unless-stopped
+    hostname: minio
     ports:
-      - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pact-db
-      DB_PASSWORD: ${DB_PASSWORD}
-    networks:
-      - pact-network
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_SERVER_URL=http://localhost:9000
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+#  pact:
+#    container_name: pact
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    ports:
+#      - "8081:8081"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    environment:
+#      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pact-db
+#      DB_PASSWORD: ${DB_PASSWORD}
+#    networks:
+#      - pact-network
 
 volumes:
   postgres-data:
+  minio_data:
 
 networks:
   pact-network:

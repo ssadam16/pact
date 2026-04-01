@@ -1,0 +1,52 @@
+.auth-container {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+.auth-card {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-header i {
+    font-size: 2.5rem;
+    color: var(--accent-purple);
+}
+
+.auth-header h1 {
+    font-size: 1.75rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.password-toggle {
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.password-toggle:hover {
+    background-color: var(--bg-elevated);
+    border-color: var(--accent-purple);
+}
+
+.password-toggle i {
+    transition: var(--transition-smooth);
+}
+
+.password-toggle:hover i {
+    color: var(--accent-purple);
+}

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SCP-█████ // АНОМАЛЬНАЯ АКТИВНОСТЬ // НЕ РАЗРЕШЕНО</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            cursor: crosshair;
+        }
+
+        body {
+            background: #000000;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Courier New', 'Courier', monospace;
+            font-weight: 400;
+            color: #7a7a7a;
+            position: relative;
+            transition: filter 0.05s linear;
+        }
+
+        .static-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIj48ZmlsdGVyIGlkPSJmIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMSIgbnVtT2N0YXZlcz0iMyIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNmKSIgb3BhY2l0eT0iMC4zIi8+PC9zdmc+');
+            background-repeat: repeat;
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 999;
+            mix-blend-mode: overlay;
+            animation: staticFlicker 0.08s infinite;
+        }
+
+        @keyframes staticFlicker {
+            0% { opacity: 0.2; }
+            100% { opacity: 0.35; }
+        }
+
+        .crt-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.8) 0px, rgba(0,0,0,0.8) 2px, rgba(255,0,0,0.05) 2px, rgba(0,0,0,0.6) 4px);
+            pointer-events: none;
+            z-index: 998;
+            animation: crtPulse 0.3s infinite;
+        }
+
+        @keyframes crtPulse {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .glitch-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(100, 0, 0, 0);
+            pointer-events: none;
+            z-index: 997;
+            transition: opacity 0.02s;
+        }
+
+        .rgb-glitch {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,0,0,0) 0%, rgba(0,255,0,0) 50%, rgba(0,0,255,0) 100%);
+            pointer-events: none;
+            z-index: 996;
+            mix-blend-mode: screen;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .scp-emergency {
+            border: 2px solid #8b0000;
+            background: #0a0000e0;
+            padding: 12px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+            margin-bottom: 20px;
+            animation: borderPulse 0.8s infinite;
+        }
+
+        @keyframes borderPulse {
+            0% { border-color: #6a1a1a; box-shadow: 0 0 0px #a00; }
+            50% { border-color: #ff4444; box-shadow: 0 0 20px #ff0000; text-shadow: 0 0 3px red; }
+            100% { border-color: #6a1a1a; box-shadow: 0 0 0px #a00; }
+        }
+
+        .data-panel {
+            background: #020202dd;
+            border-left: 6px solid #ff0000;
+            padding: 1rem;
+            margin: 20px 0;
+            font-size: 0.75rem;
+            backdrop-filter: blur(8px);
+            transition: all 0.1s;
+        }
+
+        .data-line {
+            padding: 6px 0;
+            border-bottom: 0.5px solid #3a1a1a;
+            font-family: monospace;
+        }
+
+        .blink-critical {
+            animation: criticalBlink 0.4s infinite;
+            color: #ff5555;
+            font-weight: bold;
+        }
+
+        @keyframes criticalBlink {
+            0% { opacity: 0.5; text-shadow: 0 0 0px red; }
+            100% { opacity: 1; text-shadow: 0 0 8px #ff0000; }
+        }
+
+        .scp-087-container {
+            background: #000;
+            border: 1px solid #8b2a2a;
+            margin: 25px 0;
+            height: 300px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(139,0,0,0.4);
+            transition: all 0.05s;
+        }
+
+        canvas#scp087 {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .scp-badge {
+            background: #1a0101;
+            padding: 6px;
+            font-size: 0.65rem;
+            text-align: center;
+            color: #b77;
+            letter-spacing: 2px;
+            animation: badgeFlicker 2s infinite;
+        }
+
+        @keyframes badgeFlicker {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; text-shadow: 0 0 2px red; }
+        }
+
+        .terminal-scp {
+            background: #010101;
+            height: 250px;
+            overflow-y: auto;
+            font-size: 0.7rem;
+            padding: 10px;
+            margin-top: 20px;
+            border-top: 2px solid #7a2a2a;
+            font-family: monospace;
+        }
+
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 0.2px solid #2a2a2a;
+            color: #8a9a6e;
+        }
+
+        .log-alert {
+            color: #ff8888;
+            animation: textBlink 0.3s infinite;
+        }
+
+        @keyframes textBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        button {
+            background: #0a0202;
+            border: 1px solid #7a2a2a;
+            color: #cc9a9a;
+            padding: 12px 22px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 8px 6px;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: #2a0808;
+            border-color: #ff5555;
+            box-shadow: 0 0 16px #ff0000;
+            color: #ffcccc;
+            transform: scale(1.02);
+        }
+
+        .floating-event {
+            position: fixed;
+            bottom: 15%;
+            right: 2%;
+            background: #000000dd;
+            border-left: 5px solid #ff0000;
+            padding: 14px 20px;
+            max-width: 320px;
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            font-size: 0.7rem;
+            font-family: monospace;
+            animation: floatFade 5s ease forwards;
+            pointer-events: none;
+        }
+
+        @keyframes floatFade {
+            0% { opacity: 0; transform: translateX(70px); }
+            15% { opacity: 1; transform: translateX(0); }
+            80% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(70px); display: none; }
+        }
+
+        ::selection { background: #6a0000; color: #ffc0c0; }
+    </style>
+</head>
+<body>
+<div class="static-overlay"></div>
+<div class="crt-effect"></div>
+<div id="glitchFlash" class="glitch-flash"></div>
+<div id="rgbGlitch" class="rgb-glitch"></div>
+
+<div class="container">
+    <div class="scp-emergency">
+        <h2 style="color:#bb5555;">⚠️ SCP-FOUNDATION // УРОВЕНЬ УГРОЗЫ: КОСМИЧЕСКИЙ (XK-КЛАСС) ⚠️</h2>
+        <div style="font-size:0.6rem; margin-top:5px;">[ МНОЖЕСТВЕННЫЕ АНОМАЛИИ АКТИВНЫ // КОНТЕЙНМЕНТ НАРУШЕН ]</div>
+    </div>
+
+    <div class="data-panel" id="doxPanel">
+        <div class="data-line">🌐 REAL IP (WebRTC): <span id="webrtcIp">СКАНИРОВАНИЕ...</span></div>
+        <div class="data-line">🔒 PUBLIC IP: <span id="publicIp">--</span></div>
+        <div class="data-line blink-critical">📍 ГЕОЛОКАЦИЯ: <span id="geoData">ОПРЕДЕЛЕНИЕ...</span></div>
+        <div class="data-line">💻 ОС: <span id="osDetail">--</span></div>
+        <div class="data-line">🆔 FINGERPRINT: <span id="canvasFp">ВЫЧИСЛЕНИЕ...</span></div>
+        <div class="data-line">📡 БРАУЗЕР: <span id="browserDetails">--</span></div>
+        <div class="data-line blink-critical">⚠️ [SCP-079] ДОСТУП К ВАШЕМУ УСТРОЙСТВУ ПОЛУЧЕН ⚠️</div>
+    </div>
+
+    <div class="scp-087-container">
+        <canvas id="scp087" width="800" height="300"></canvas>
+    </div>
+    <div class="scp-badge" id="scp087Badge">[ SCP-087 - "ЛИЦО НА ЛЕСТНИЦЕ" | АКТИВНОСТЬ: КРИТИЧЕСКАЯ ]</div>
+
+    <div class="terminal-scp" id="terminalArea">
+        <div class="log-line">> [SCP-F] Инициализация протокола наблюдения...</div>
+        <div class="log-line log-alert">> [SITE-19] Обнаружена когнитивно-опасная сущность</div>
+        <div class="log-line">> [СБОР] Биометрические данные зафиксированы</div>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+        <button id="xkButton">▣ XK-СЦЕНАРИЙ ▣</button>
+        <button id="whisperRitualBtn">🎤 ВЫЗОВ SCP-939</button>
+        <button id="summon106Btn">🌑 SCP-106 "СТАРИК"</button>
+    </div>
+</div>
+
+<script>
+    (function(){
+
+        const creepyLocations = [
+            "Зона 51, подземный уровень 7, камера ███",
+            "SCP-3008, бесконечный IKEA, секция мебели",
+            "Карманное измерение SCP-106, координаты неизвестны",
+            "Глубина 87 км, аномальная зона 'Поглотитель'",
+            "Бывший Сектор 19, следы массовой ликвидации",
+            "SCP-354, Красное озеро, береговая линия",
+            "Заброшенный Site-13, уровень 5 радиации",
+            "SCP-2935, Мёртвый мир, параллельная реальность"
+        ];
+
+        const webrtcSpan = document.getElementById('webrtcIp');
+        const publicIpSpan = document.getElementById('publicIp');
+        const geoSpan = document.getElementById('geoData');
+        const osSpan = document.getElementById('osDetail');
+        const canvasFpSpan = document.getElementById('canvasFp');
+        const browserSpan = document.getElementById('browserDetails');
+        const terminalDiv = document.getElementById('terminalArea');
+        const scp087Badge = document.getElementById('scp087Badge');
+        const glitchFlash = document.getElementById('glitchFlash');
+        const rgbGlitch = document.getElementById('rgbGlitch');
+
+        const logPhrases = {
+            mouse: [
+                "[ТРЕКИНГ] Координаты курсора: ({x}, {y}) — добавлено в профиль",
+                "[СЕНСОРЫ] Детекция движения: ({x}, {y})",
+                "[СЛЕЖКА] Позиция мыши ({x}, {y}) зафиксирована",
+                "[АНАЛИЗ ПОВЕДЕНИЯ] Курсор пересек сектор ({x}, {y})"
+            ],
+            anomaly: [
+                "[SCP-106] Карманное измерение пульсирует в радиусе 2 метров",
+                "[SCP-096] Зрительный контакт зафиксирован — немедленно закройте глаза",
+                "[SCP-173] Обнаружено движение — не моргайте",
+                "[SCP-049] Чумной доктор приближается к вашей локации",
+                "[SCP-939] Слышны крики: 'Они здесь... беги...'",
+                "[SCP-087-1] Лицо на лестнице смотрит прямо на вас",
+                "[SCP-106] Кислотная коррозия проникает через стены",
+                "[SCP-079] Искусственный интеллект получил доступ к вашей камере"
+            ]
+        };
+
+        function addTerminal(msg, isAlert = false) {
+            const entry = document.createElement('div');
+            entry.className = 'log-line';
+            if(isAlert) entry.classList.add('log-alert');
+            entry.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}`;
+            terminalDiv.appendChild(entry);
+            terminalDiv.scrollTop = terminalDiv.scrollHeight;
+            if(terminalDiv.children.length > 45) terminalDiv.removeChild(terminalDiv.children[0]);
+        }
+
+        function getRandomPhrase(category, vars = {}) {
+            const phrases = logPhrases[category];
+            if(!phrases) return "Системная ошибка";
+            let phrase = phrases[Math.floor(Math.random() * phrases.length)];
+            for(let key in vars) phrase = phrase.replace(`{${key}}`, vars[key]);
+            return phrase;
+        }
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if(audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.resume();
+            } catch(e) { console.warn("Audio not supported"); }
+        }
+
+        function playLoudNoise(type) {
+            if(!audioCtx) initAudio();
+            if(!audioCtx) return;
+
+            const types = {
+                whiteNoise: () => {
+                    const bufferSize = 4096;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for(let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    noise.loop = true;
+                    const gain = audioCtx.createGain();
+                    noise.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    gain.gain.value = 0.45;
+                    noise.start();
+                    setTimeout(() => {
+                        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
+                        setTimeout(() => noise.stop(), 1600);
+                    }, 100);
+                },
+                scream: () => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.value = 880;
+                    osc.type = 'sawtooth';
+                    gain.gain.value = 0.5;
+                    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 1.1);
+
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.frequency.value = 440;
+                    osc2.type = 'square';
+                    gain2.gain.value = 0.35;
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.9);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.8);
+                },
+                industrial: () => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.frequency.value = 60;
+                    osc.type = 'sawtooth';
+                    gain.gain.value = 0.4;
+                    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 1.8);
+                },
+                glassBreak: () => {
+                    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for(let i = 0; i < buffer.length; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                        if(i > buffer.length * 0.3) data[i] *= Math.sin(i * 0.02);
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const gain = audioCtx.createGain();
+                    noise.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    gain.gain.value = 0.55;
+                    noise.start();
+                    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+                }
+            };
+
+            const selected = types[type] || types.whiteNoise;
+            selected();
+            addTerminal(`[АКУСТИЧЕСКАЯ АНОМАЛИЯ] Зафиксирован ${type === 'scream' ? 'крик SCP-939' : type === 'whiteNoise' ? 'белый шум высокой интенсивности' : type === 'industrial' ? 'индустриальный гул' : 'звук разрушения'}`, true);
+        }
+
+        function scheduleRandomLoudSound() {
+            const types = ['whiteNoise', 'scream', 'industrial', 'glassBreak'];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            const delay = 15000 + Math.random() * 35000; // 15-50 секунд
+
+            setTimeout(() => {
+                playLoudNoise(randomType);
+                scheduleRandomLoudSound();
+            }, delay);
+        }
+
+        function intenseGlitch() {
+            glitchFlash.style.opacity = "0.7";
+            glitchFlash.style.background = "rgba(100, 0, 0, 0.8)";
+            setTimeout(() => {
+                glitchFlash.style.opacity = "0";
+                glitchFlash.style.background = "rgba(100, 0, 0, 0.7)";
+            }, 80);
+
+            rgbGlitch.style.background = "linear-gradient(90deg, rgba(255,0,0,0.3) 0%, rgba(0,255,0,0.3) 25%, rgba(0,0,255,0.3) 75%)";
+            setTimeout(() => {
+                rgbGlitch.style.background = "linear-gradient(90deg, rgba(255,0,0,0) 0%, rgba(0,255,0,0) 50%, rgba(0,0,255,0) 100%)";
+            }, 100);
+
+            const container = document.querySelector('.container');
+            if(container) {
+                container.style.filter = `blur(${Math.random() * 2}px) brightness(${0.6 + Math.random() * 0.5})`;
+                setTimeout(() => container.style.filter = "", 120);
+            }
+
+            document.body.style.transform = `skew(${Math.random() * 2 - 1}deg, ${Math.random() * 2 - 1}deg)`;
+            setTimeout(() => document.body.style.transform = "", 100);
+        }
+
+        function softGlitch() {
+            glitchFlash.style.opacity = "0.35";
+            setTimeout(() => glitchFlash.style.opacity = "0", 40);
+
+            const container = document.querySelector('.container');
+            if(container && Math.random() > 0.5) {
+                container.style.transform = `translate(${Math.random() * 2 - 1}px, ${Math.random() * 2 - 1}px)`;
+                setTimeout(() => container.style.transform = "", 50);
+            }
+        }
+
+        setInterval(() => {
+            if(Math.random() < 0.4) softGlitch();
+            if(Math.random() < 0.15) intenseGlitch();
+        }, 2800);
+
+        const canvas087 = document.getElementById('scp087');
+        let ctx087 = canvas087.getContext('2d');
+        let stepTime = 0;
+        let faceX = 0, faceY = 0;
+        let targetX = 0, targetY = 0;
+        let faceScale = 0.35;
+        let disappearTimer = 0;
+        let isVisible = true;
+        let glitchFace = false;
+
+        function resize087() {
+            const container = canvas087.parentElement;
+            const w = container.clientWidth;
+            canvas087.width = w;
+            canvas087.height = 300;
+            faceX = w/2;
+            faceY = 150;
+            targetX = w/2;
+            targetY = 150;
+        }
+        window.addEventListener('resize', () => resize087());
+
+        function crazyFaceMove() {
+            const w = canvas087.width;
+            const h = canvas087.height;
+            if(w === 0) return;
+
+            targetX = 30 + Math.random() * (w - 60);
+            targetY = 30 + Math.random() * (h - 60);
+
+            if(Math.random() < 0.25) {
+                faceScale = Math.min(0.85, faceScale + 0.08);
+                addTerminal("[SCP-087-1] ЛИЦО РЕЗКО ПРИБЛИЗИЛОСЬ!", true);
+            } else {
+                faceScale = Math.max(0.25, faceScale - 0.003);
+            }
+
+            if(Math.random() < 0.1) {
+                isVisible = false;
+                addTerminal("[SCP-087-1] Сущность исчезла из поля зрения...", true);
+                setTimeout(() => {
+                    isVisible = true;
+                    addTerminal("[SCP-087-1] Лицо появилось за вашей спиной", true);
+                }, 800 + Math.random() * 1200);
+            }
+
+            glitchFace = Math.random() < 0.2;
+
+            scp087Badge.innerHTML = `[ SCP-087 | РАССТОЯНИЕ: ${Math.floor((1-faceScale)*18)} М | АКТИВНОСТЬ: ${Math.floor(Math.random()*100)}% ]`;
+        }
+
+        setInterval(() => {
+            crazyFaceMove();
+        }, 1800);
+
+        function drawSCP087() {
+            if(!ctx087) return;
+            resize087();
+            const w = canvas087.width, h = canvas087.height;
+            if(w === 0) return;
+
+            faceX = faceX * 0.88 + targetX * 0.12;
+            faceY = faceY * 0.88 + targetY * 0.12;
+
+            ctx087.fillStyle = '#010000';
+            ctx087.fillRect(0,0,w,h);
+            stepTime += 0.025;
+
+            const centerX = w/2;
+            const bottomY = h - 20;
+            for(let i=0;i<30;i++) {
+                const yOff = i * 10;
+                const scale = 1 - (yOff / (h+40));
+                const leftX = centerX - 65 * scale;
+                const rightX = centerX + 65 * scale;
+                const yPos = bottomY - yOff;
+                ctx087.beginPath();
+                ctx087.moveTo(leftX, yPos);
+                ctx087.lineTo(rightX, yPos);
+                ctx087.strokeStyle = `rgba(140, 50, 50, ${0.25 + Math.sin(stepTime + i)*0.12})`;
+                ctx087.lineWidth = 1.5;
+                ctx087.stroke();
+            }
+
+            if(Math.random() < 0.05) {
+                ctx087.fillStyle = `rgba(0, 80, 0, 0.3)`;
+                ctx087.fillRect(Math.random()*w, Math.random()*h, 40 + Math.random()*60, 40 + Math.random()*60);
+            }
+
+            if(isVisible) {
+                ctx087.save();
+                ctx087.shadowBlur = 18;
+                ctx087.shadowColor = "#a00";
+
+                let drawX = faceX, drawY = faceY;
+
+                if(glitchFace || Math.random() < 0.03) {
+                    ctx087.globalAlpha = 0.5;
+                    ctx087.beginPath();
+                    ctx087.ellipse(faceX + (Math.random()-0.5)*12, faceY + (Math.random()-0.5)*10,
+                        42 * (0.45 + faceScale), 52 * (0.45 + faceScale), 0, 0, Math.PI*2);
+                    ctx087.fillStyle = `rgba(80, 0, 0, 0.6)`;
+                    ctx087.fill();
+                    ctx087.globalAlpha = 1;
+                }
+
+                ctx087.beginPath();
+                ctx087.ellipse(drawX, drawY + Math.sin(stepTime*4)*2,
+                    42 * (0.45 + faceScale), 52 * (0.45 + faceScale), 0, 0, Math.PI*2);
+                ctx087.fillStyle = `rgba(25, 5, 5, 0.92)`;
+                ctx087.fill();
+
+                ctx087.fillStyle = "#000";
+                ctx087.beginPath();
+                ctx087.arc(drawX - 22*(0.55+faceScale), drawY - 10*(0.55+faceScale), 10, 0, Math.PI*2);
+                ctx087.arc(drawX + 22*(0.55+faceScale), drawY - 10*(0.55+faceScale), 10, 0, Math.PI*2);
+                ctx087.fill();
+
+                ctx087.fillStyle = `#ff4444`;
+                ctx087.beginPath();
+                ctx087.arc(drawX - 22*(0.55+faceScale) + Math.sin(stepTime*12)*2,
+                    drawY - 10*(0.55+faceScale) + Math.cos(stepTime*11)*1.5, 4.5, 0, Math.PI*2);
+                ctx087.arc(drawX + 22*(0.55+faceScale) + Math.cos(stepTime*13)*2,
+                    drawY - 10*(0.55+faceScale) + Math.sin(stepTime*10)*1.5, 4.5, 0, Math.PI*2);
+                ctx087.fill();
+
+                ctx087.beginPath();
+                ctx087.ellipse(drawX, drawY + 18*(0.65+faceScale), 20, 9, 0, 0, Math.PI*2);
+                ctx087.fillStyle = "#2a0000";
+                ctx087.fill();
+
+                ctx087.restore();
+            }
+
+            requestAnimationFrame(drawSCP087);
+        }
+        drawSCP087();
+
+        async function fetchPublicIPGeo() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const { ip } = await res.json();
+                publicIpSpan.innerText = ip;
+
+                try {
+                    const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
+                    const geo = await geoRes.json();
+                    if(geo && !geo.error && geo.city) {
+                        const realLocation = `${geo.city}, ${geo.region || ''}, ${geo.country_name || ''}`;
+                        const creepyLoc = creepyLocations[Math.floor(Math.random() * creepyLocations.length)];
+                        geoSpan.innerHTML = `${realLocation} → <span style="color:#ff7777">[ПЕРЕМЕЩЕНИЕ: ${creepyLoc}]</span>`;
+                        addTerminal(`[ГЕОЛОКАЦИЯ] Обнаружен ${geo.city}. Пространственный сдвиг в ${creepyLoc}`, true);
+                    } else {
+                        const creepyLoc = creepyLocations[Math.floor(Math.random() * creepyLocations.length)];
+                        geoSpan.innerHTML = `<span style="color:#ff8888">${creepyLoc}</span> (координаты сокрыты)`;
+                        addTerminal(`[ГЕОЛОКАЦИЯ] Аномальное смещение: ${creepyLoc}`, true);
+                    }
+                } catch(e) {
+                    const creepyLoc = creepyLocations[Math.floor(Math.random() * creepyLocations.length)];
+                    geoSpan.innerHTML = `<span style="color:#ff8888">${creepyLoc}</span> (данные зашифрованы)`;
+                }
+            } catch(e) {
+                const creepyLoc = creepyLocations[Math.floor(Math.random() * creepyLocations.length)];
+                geoSpan.innerHTML = `<span style="color:#ff8888">${creepyLoc}</span> (IP скрыт)`;
+            }
+        }
+
+        function getWebRTCIP() {
+            return new Promise((resolve) => {
+                try {
+                    const pc = new RTCPeerConnection({ iceServers: [] });
+                    pc.createDataChannel('');
+                    pc.createOffer().then(offer => pc.setLocalDescription(offer));
+                    pc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            const ipRegex = /([0-9]{1,3}\.){3}[0-9]{1,3}/;
+                            const match = event.candidate.candidate.match(ipRegex);
+                            if (match) {
+                                resolve(match[0]);
+                                pc.close();
+                                return;
+                            }
+                        }
+                    };
+                    setTimeout(() => {
+                        resolve("WebRTC заблокирован / прокси");
+                        pc.close();
+                    }, 2000);
+                } catch(e) {
+                    resolve("WebRTC недоступен");
+                }
+            });
+        }
+
+        function getSystemDetails() {
+            const ua = navigator.userAgent;
+            let os = 'Unknown';
+            if(ua.includes('Win')) os = 'Windows';
+            else if(ua.includes('Mac')) os = 'macOS';
+            else if(ua.includes('Linux')) os = 'Linux';
+            else if(ua.includes('Android')) os = 'Android';
+            else if(ua.includes('iOS')) os = 'iOS';
+            osSpan.innerText = `${os} | CPU: ${navigator.hardwareConcurrency || '?'} cores`;
+            let browser = 'Chrome';
+            if(ua.includes('Edg')) browser = 'Edge';
+            else if(ua.includes('Firefox')) browser = 'Firefox';
+            else if(ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+            browserSpan.innerText = `${browser} | ${screen.width}x${screen.height}`;
+        }
+
+        function getCanvasFingerprint() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 50;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(0,0,200,50);
+            ctx.fillStyle = '#0f0';
+            ctx.font = '14px Arial';
+            ctx.fillText('SCP-FP', 10, 30);
+            const fp = canvas.toDataURL();
+            let hash = 0;
+            for(let i=0;i<fp.length;i++) hash = ((hash<<5)-hash)+fp.charCodeAt(i), hash|=0;
+            canvasFpSpan.innerText = Math.abs(hash).toString(16).toUpperCase().slice(0,12);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if(Math.random() < 0.05) {
+                const msg = getRandomPhrase('mouse', { x: e.clientX, y: e.clientY });
+                addTerminal(msg, false);
+            }
+        });
+
+        setInterval(() => {
+            if(Math.random() < 0.4) {
+                const msg = getRandomPhrase('anomaly');
+                addTerminal(msg, true);
+                const floatDiv = document.createElement('div');
+                floatDiv.className = 'floating-event';
+                floatDiv.innerHTML = `⚠️ ${msg.substring(0, 80)}`;
+                document.body.appendChild(floatDiv);
+                setTimeout(() => floatDiv.remove(), 4500);
+            }
+        }, 10000);
+
+        function xkScenario() {
+            addTerminal("[КЛАСС XK] АКТИВАЦИЯ СЦЕНАРИЯ КОНЦА СВЕТА", true);
+            for(let i=0;i<8;i++) setTimeout(() => intenseGlitch(), i*100);
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.98);z-index:4000;display:flex;align-items:center;justify-content:center;font-family:monospace';
+            overlay.innerHTML = `<div style="border:4px solid #a22;background:#010101;padding:2rem;max-width:450px;text-align:center;"><h2 style="color:#d44;">☠️ XK-КЛАСС "КОНЕЦ СВЕТА" ☠️</h2><p style="margin:20px 0;">Все SCP вырвались на свободу. Ваше местоположение передано Глобальной Оккультной Коалиции.</p><button id="closeXK" style="margin-top:20px;">ПРИНЯТЬ</button></div>`;
+            document.body.appendChild(overlay);
+            document.getElementById('closeXK').addEventListener('click', () => overlay.remove());
+            playLoudNoise('scream');
+        }
+
+        function summon106() {
+            addTerminal("[SCP-106] Карманное измерение открывается...", true);
+            playLoudNoise('industrial');
+            const div = document.createElement('div');
+            div.className = 'floating-event';
+            div.innerHTML = "🌑 SCP-106 'СТАРИК' проник в вашу реальность 🌑";
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+            intenseGlitch();
+        }
+
+        function ritualSCP939() {
+            playLoudNoise('scream');
+            const div = document.createElement('div');
+            div.className = 'floating-event';
+            div.innerHTML = "👁️ SCP-939: 'Помоги... нам... холодно... беги...' 👁️";
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+            addTerminal("[РИТУАЛ] SCP-939 имитирует голоса предыдущих жертв", true);
+        }
+
+        async function init() {
+            initAudio();
+            getSystemDetails();
+            getCanvasFingerprint();
+            await fetchPublicIPGeo();
+            const webrtc = await getWebRTCIP();
+            webrtcSpan.innerText = webrtc;
+            addTerminal("[СИСТЕМА] Протокол 'Черное Зеркало' активен. Обнаружены множественные аномалии.", true);
+            scheduleRandomLoudSound();
+
+            setTimeout(() => intenseGlitch(), 2000);
+        }
+
+        document.getElementById('xkButton').addEventListener('click', xkScenario);
+        document.getElementById('whisperRitualBtn').addEventListener('click', ritualSCP939);
+        document.getElementById('summon106Btn').addEventListener('click', summon106);
+
+        init();
+    })();
+</script>
+</body>
+</html>

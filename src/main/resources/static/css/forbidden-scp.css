@@ -1,0 +1,30 @@
+.scp-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #0a0c10 0%, #000000 100%);
+}
+
+.scp-card {
+    background: rgba(18, 20, 28, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--accent-purple);
+    border-radius: 32px;
+    max-width: 600px;
+    text-align: center;
+}
+
+.scp-glitch {
+    font-size: 5rem;
+    font-weight: 800;
+    letter-spacing: 8px;
+    animation: glitch 3s infinite;
+}
+
+@keyframes glitch {
+    0%, 100% { text-shadow: 2px 0 var(--accent-purple), -2px 0 var(--accent-cyan); }
+    25% { text-shadow: -2px 0 var(--accent-purple), 2px 0 var(--accent-cyan); }
+    50% { text-shadow: 2px 0 var(--accent-cyan), -2px 0 var(--accent-purple); }
+    75% { text-shadow: -2px 0 var(--accent-cyan), 2px 0 var(--accent-purple); }
+}
