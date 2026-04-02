@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+<footer th:fragment="footer" class="footer mt-auto py-5">
+  <div class="container">
+    <div class="row gy-4 align-items-center">
+      <div class="col-md-5">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="bi bi-hexagon-fill fs-3" style="color: var(--accent-purple);"></i>
+          <span class="fw-bold fs-4" style="color: var(--text-primary);">Pact</span>
+        </div>
+        <p class="text-secondary-custom small">Заключи соглашение с сообществом. Контент, друзья и новые горизонты.</p>
+      </div>
+      <div class="col-md-3">
+        <ul class="list-unstyled">
+          <li><a href="/about" class="text-secondary-custom text-decoration-none small hover-lift d-inline-block">О проекте</a></li>
+          <li class="mt-2"><a href="/rules" class="text-secondary-custom text-decoration-none small hover-lift d-inline-block">Правила сообщества</a></li>
+          <li class="mt-2"><a href="/privacy" class="text-secondary-custom text-decoration-none small hover-lift d-inline-block">Конфиденциальность</a></li>
+        </ul>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <p class="text-secondary-custom small mb-0">© 2025 Pact — игровой форум нового поколения.</p>
+        <p class="text-secondary-custom small mt-1"><i class="bi bi-discord"></i> /pact · <i class="bi bi-github"></i> pact-team</p>
+      </div>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
