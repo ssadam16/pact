@@ -1,5 +1,6 @@
 package com.technokratos.pact.user.service;
 
+import com.technokratos.pact.file.service.AvatarService;
 import com.technokratos.pact.file.service.MinioService;
 import com.technokratos.pact.user.exception.UserNotFoundException;
 import com.technokratos.pact.user.dto.UserProfileResponse;
@@ -16,15 +17,15 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final MinioService minioService;
     private final UserMapper userMapper;
+    private final AvatarService avatarService;
 
     public UserProfileResponse getProfile(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> UserNotFoundException.byUsername(username));
 
         UserProfileResponse profile = userMapper.toUserProfileResponse(user);
-        profile.setAvatarUrl(minioService.getAvatarUrl(user.getAvatarFilename()));
+        profile.setAvatarUrl(avatarService.getAvatarUrl(user.getAvatarFilename()));
 
         log.info("Returning user profile (ID={}, username={})", profile.getId(), profile.getUsername());
 

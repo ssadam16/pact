@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
@@ -43,7 +44,7 @@ public class MinioService {
 
     public static class Folders {
         public static final String AVATARS = "avatars";
-
+        public static final String ARTICLES = "articles";
     }
 
     @PostConstruct
@@ -280,13 +281,13 @@ public class MinioService {
         return result.toString();
     }
 
-    public String getAvatarUrl(String filename) {
+    public String getFileUrl(String filename, String folder) {
         if (filename == null || filename.isBlank()) {
             return null;
         }
 
         try {
-            String objectPath = Folders.AVATARS + "/" + filename;
+            String objectPath = "%s/%s".formatted(folder, filename);
 
             return minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
@@ -298,7 +299,7 @@ public class MinioService {
             );
 
         } catch (Exception e) {
-            log.error("Error generating avatar URL for {}: {}", filename, e.getMessage());
+            log.error("Error generating file URL for {}: {}", filename, e.getMessage());
             return null;
         }
     }

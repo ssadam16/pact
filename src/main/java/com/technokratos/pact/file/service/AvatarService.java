@@ -59,4 +59,8 @@ public class AvatarService {
             }
         }
     }
+
+    public String getAvatarUrl(String filename) {
+        return minioService.getFileUrl(filename, MinioService.Folders.AVATARS);
+    }
 }
