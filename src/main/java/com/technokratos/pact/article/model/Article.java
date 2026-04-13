@@ -1,7 +1,7 @@
 package com.technokratos.pact.article.model;
 
 import com.technokratos.pact.common.BaseEntity;
-import com.technokratos.pact.game.Game;
+import com.technokratos.pact.game.model.Game;
 import com.technokratos.pact.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;

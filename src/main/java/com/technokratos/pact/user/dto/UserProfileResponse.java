@@ -4,6 +4,8 @@ import com.technokratos.pact.user.model.User;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -16,4 +18,5 @@ public class UserProfileResponse {
         private String avatarUrl;
         private String isEnabled;
         private String isVerified;
+        private LocalDateTime createdAt;
 }

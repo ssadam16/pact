@@ -14,3 +14,10 @@ create table if not exists user_entity (
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp
 );
+
+create table if not exists friendship (
+    who_id uuid not null references user_entity(id) on delete cascade,
+    to_whom_id uuid not null references user_entity(id) on delete cascade,
+    status varchar(50) not null check (status in('PENDING', 'ACCEPTED')),
+    primary key (who_id, to_whom_id)
+);

@@ -10,10 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Data
 @Builder(toBuilder = true)
@@ -59,9 +56,7 @@ public class UserDetailsImpl implements UserDetails, OAuth2User {
                 .id(user.getId())
                 .email(user.getEmail())
                 .password(user.getHashPassword())
-                .authorities(Arrays.stream(User.Role.values())
-                        .map(r -> new SimpleGrantedAuthority(r.toString()))
-                        .toList())
+                .authorities(List.of(new SimpleGrantedAuthority(user.getRole().name())))
                 .build();
     }
 
