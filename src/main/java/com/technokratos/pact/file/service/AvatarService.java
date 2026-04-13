@@ -52,9 +52,9 @@ public class AvatarService {
             try {
                 String filePath = MinioService.Folders.AVATARS + "/" + user.getAvatarFilename();
                 minioService.deleteFile(filePath);
-                log.debug("Old avatar deleted: {}", user.getAvatarFilename());
+                log.debug("Old image deleted: {}", user.getAvatarFilename());
             } catch (Exception e) {
-                log.warn("Failed to delete old avatar for user {}: {}",
+                log.warn("Failed to delete old image for user {}: {}",
                         user.getId(), e.getMessage());
             }
         }

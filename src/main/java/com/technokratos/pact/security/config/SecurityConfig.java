@@ -52,10 +52,10 @@ public class SecurityConfig {
                                 "/egg/**",
                                 "/error",
                                 "/static/**",
-                                "/images/**",
                                 "/css/**",
                                 "/js/**",
-                                "/favicon.ico"
+                                "/favicon.ico",
+                                "/api/images/**"
                         ).permitAll()
                         .requestMatchers("/auth/**", "/oauth2/**").permitAll()
                         .requestMatchers("/admin").hasRole("ADMIN")
