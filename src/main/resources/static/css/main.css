@@ -6,6 +6,7 @@
 @import url('profile.css');
 @import url('article.css');
 @import url('article-create.css');
+@import url('friendship.css');
 
 :root {
     --bg-dark: #0a0c10;
