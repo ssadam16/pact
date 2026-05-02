@@ -6,6 +6,7 @@
 @import url('profile.css');
 @import url('article.css');
 @import url('article-create.css');
+@import url('friendship.css');
 
 :root {
     --bg-dark: #0a0c10;
@@ -275,7 +276,7 @@ a:hover {
     border: 1px solid var(--border-subtle);
     border-radius: 28px;
     transition: var(--transition-smooth);
-    height: 100%;
+    height: auto;
 }
 
 .card-glass:hover {
