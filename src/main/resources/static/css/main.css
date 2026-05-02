@@ -276,7 +276,7 @@ a:hover {
     border: 1px solid var(--border-subtle);
     border-radius: 28px;
     transition: var(--transition-smooth);
-    height: 100%;
+    height: auto;
 }
 
 .card-glass:hover {

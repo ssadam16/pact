@@ -66,7 +66,7 @@
                     </h3>
 
                     <div id="requestsList">
-                        <div th:if="${friendshipRequests.empty}" class="text-center py-4">
+                        <div th:if="${friendshipRequests.isEmpty()}" class="text-center py-4">
                             <i class="bi bi-inbox fs-1 text-secondary-custom"></i>
                             <p class="text-secondary-custom mt-2 mb-0">Нет входящих заявок</p>
                         </div>
@@ -115,12 +115,12 @@
                     </h3>
 
                     <div id="friendsList">
-                        <div th:if="${friends.empty}" class="text-center py-5">
+                        <div th:if="${friends.isEmpty()}" class="text-center py-5">
                             <i class="bi bi-people fs-1 text-secondary-custom"></i>
                             <p class="text-secondary-custom mt-2 mb-0">У вас пока нет друзей</p>
                             <p class="text-secondary-custom small">Найдите интересных людей через поиск</p>
                         </div>
-                        <div class="row g-3" th:if="${!friends.empty}">
+                        <div class="row g-3" th:if="${!friends.isEmpty()}">
                             <div class="col-sm-6 col-md-4" th:each="friend : ${friends}" th:attr="data-friend-id=${friend.id}">
                                 <div class="friend-card p-3 text-center">
                                     <div class="friend-avatar mb-2">
