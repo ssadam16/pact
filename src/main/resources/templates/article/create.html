@@ -68,6 +68,20 @@
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
+                                <i class="bi bi-tags-fill me-1" style="color: var(--accent-purple);"></i>
+                                Теги статьи
+                            </label>
+                            <select class="form-select bg-transparent border-subtle" th:field="*{tagIds}" multiple size="4">
+                                <option th:each="tag : ${tags}"
+                                        th:value="${tag.id}"
+                                        th:text="${tag.name}">
+                                </option>
+                            </select>
+                            <div class="form-text text-secondary-custom">Выберите теги для статьи (можно несколько)</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
                                 <i class="bi bi-file-text-fill me-1" style="color: var(--accent-purple);"></i>
                                 Содержание
                             </label>

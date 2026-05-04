@@ -6,6 +6,7 @@ import com.technokratos.pact.article.dto.ArticleResponse;
 import com.technokratos.pact.article.mapper.ArticleMapper;
 import com.technokratos.pact.article.model.Article;
 import com.technokratos.pact.article.repository.ArticleRepository;
+import com.technokratos.pact.article.repository.ArticleTagRepository;
 import com.technokratos.pact.game.model.Game;
 import com.technokratos.pact.game.repository.GameRepository;
 import com.technokratos.pact.user.exception.UserNotFoundException;
@@ -30,6 +31,7 @@ public class ArticleService {
     private final GameRepository gameRepository;
     private final ArticleMapper articleMapper;
     private final UserRepository userRepository;
+    private final ArticleTagRepository tagRepository;
 
     @Transactional
     public UUID create(ArticleCreateRequest request, UUID authorId) {
@@ -47,6 +49,10 @@ public class ArticleService {
         if (request.gameIds() != null && !request.gameIds().isEmpty()) {
             List<Game> games = gameRepository.findAllById(request.gameIds());
             article.setGames(new HashSet<>(games));
+        }
+
+        if (request.tagIds() != null && !request.tagIds().isEmpty()) {
+            article.setTags(new HashSet<>(tagRepository.findAllById(request.tagIds())));
         }
 
         Article saved = articleRepository.save(article);
