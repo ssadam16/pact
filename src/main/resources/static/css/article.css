@@ -159,6 +159,17 @@
     margin: 2rem 0;
 }
 
+.tag {
+    background: rgba(139, 92, 246, 0.12);
+    padding: 0.25rem 0.9rem;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--accent-purple);
+    width: fit-content;
+}
+
 @media (max-width: 768px) {
     .article-title {
         font-size: 1.75rem;

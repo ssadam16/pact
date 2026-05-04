@@ -1,5 +1,6 @@
 package com.technokratos.pact.article.dto;
 
+import com.technokratos.pact.article.model.ArticleTag;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
@@ -13,6 +14,8 @@ public record ArticleCreateRequest(
         @NotBlank
         String content,
 
-        List<UUID> gameIds
+        List<UUID> gameIds,
+
+        List<UUID> tagIds
 ) {
 }

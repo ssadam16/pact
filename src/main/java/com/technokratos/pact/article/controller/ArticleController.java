@@ -2,6 +2,7 @@ package com.technokratos.pact.article.controller;
 
 import com.technokratos.pact.article.dto.ArticleCreateRequest;
 import com.technokratos.pact.article.service.ArticleService;
+import com.technokratos.pact.article.service.ArticleTagService;
 import com.technokratos.pact.game.service.GameService;
 import com.technokratos.pact.security.model.UserDetailsImpl;
 import jakarta.validation.Valid;
@@ -22,11 +23,13 @@ public class ArticleController {
 
     private final ArticleService articleService;
     private final GameService gameService;
+    private final ArticleTagService tagService;
 
     @GetMapping("/create")
     public String createPage(Model model) {
-        model.addAttribute("articleCreateRequest", new ArticleCreateRequest(null, null, null));
+        model.addAttribute("articleCreateRequest", new ArticleCreateRequest(null, null, null, null));
         model.addAttribute("games", gameService.findAll());
+        model.addAttribute("tags", tagService.findAll());
         return "article/create";
     }
 
@@ -43,6 +46,7 @@ public class ArticleController {
                     bindingResult
             );
             redirectAttributes.addFlashAttribute("article", request);
+            redirectAttributes.addFlashAttribute("error", "Пожалуйста, исправьте ошибки в форме");
 
             return "redirect:/article/create";
         }

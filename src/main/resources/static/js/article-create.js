@@ -100,7 +100,44 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
+function updateTagsCounter() {
+    const tagSelect = document.getElementById('tagSelect');
+    const selectedCount = tagSelect.selectedOptions.length;
+    const counterSpan = document.getElementById('tagsCounter');
+    const tagError = document.getElementById('tagError');
+
+    counterSpan.textContent = `${selectedCount}/5`;
+
+    if (selectedCount > 5) {
+        counterSpan.style.color = '#f87171';
+        tagError.classList.remove('d-none');
+        tagError.style.display = 'block';
+        tagSelect.classList.add('is-invalid');
+    } else {
+        counterSpan.style.color = '';
+        tagError.classList.add('d-none');
+        tagError.style.display = 'none';
+        tagSelect.classList.remove('is-invalid');
+    }
+}
+
+function validateTags() {
+    const tagSelect = document.getElementById('tagSelect');
+    const selectedCount = tagSelect.selectedOptions.length;
+
+    if (selectedCount > 5) {
+        showNotification('Можно выбрать не более 5 тегов', 'error');
+        return false;
+    }
+
+    return true;
+}
+
 function submitArticle() {
+    if (!validateTags()) {
+        return;
+    }
+
     const content = quill.root.innerHTML;
     const hiddenContent = document.getElementById('content');
 
@@ -123,3 +160,21 @@ function submitArticle() {
 
     document.getElementById('articleForm').submit();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tagSelect = document.getElementById('tagSelect');
+
+    if (tagSelect) {
+        updateTagsCounter();
+
+        tagSelect.addEventListener('change', function(e) {
+            const selectedCount = tagSelect.selectedOptions.length;
+
+            if (selectedCount > 5) {
+                showNotification('Можно выбрать не более 5 тегов', 'error');
+            }
+
+            updateTagsCounter();
+        });
+    }
+});

@@ -1,5 +1,6 @@
 package com.technokratos.pact.article.dto;
 
+import com.technokratos.pact.article.model.ArticleTag;
 import com.technokratos.pact.game.dto.GameResponse;
 import com.technokratos.pact.user.dto.UserShortProfileResponse;
 import lombok.Builder;
@@ -17,4 +18,5 @@ public class ArticleResponse{
         private Set<GameResponse> games;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        private Set<ArticleTagResponse> tags;
 }

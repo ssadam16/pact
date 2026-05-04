@@ -20,3 +20,16 @@ create table if not exists article_game (
     game_id uuid not null references game(id) on delete cascade,
     primary key (article_id, game_id)
 );
+
+create table if not exists article_tag (
+    id uuid primary key default gen_random_uuid(),
+    name varchar(50) not null unique,
+    created_at timestamp default current_timestamp,
+    updated_at timestamp default current_timestamp
+);
+
+create table if not exists article_tag_article (
+    tag_id uuid not null references article_tag(id) on delete cascade,
+    article_id uuid not null references article(id) on delete cascade,
+    primary key (tag_id,article_id)
+);

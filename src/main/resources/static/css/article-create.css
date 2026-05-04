@@ -82,6 +82,24 @@
     background: var(--bg-elevated);
 }
 
+#tagSelect.is-invalid {
+    border-color: #f87171;
+    box-shadow: 0 0 0 0.25rem rgba(248, 113, 113, 0.25);
+}
+
+#tagsCounter {
+    transition: color 0.2s ease;
+}
+
+.badge-role {
+    background: rgba(139, 92, 246, 0.15);
+    color: var(--accent-purple);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 @media (max-width: 768px) {
     #editor {
         height: 400px;

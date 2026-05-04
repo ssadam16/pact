@@ -1,8 +1,6 @@
 package com.technokratos.pact.article.model;
 
 import com.technokratos.pact.common.BaseEntity;
-import com.technokratos.pact.game.model.Game;
-import com.technokratos.pact.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -13,7 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 
 @Entity
-@Table(name = "article")
+@Table(name = "article_tag")
 @Inheritance(strategy = InheritanceType.JOINED)
 @SuperBuilder
 @Getter
@@ -21,36 +19,33 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(callSuper = true)
-public class Article extends BaseEntity {
+public class ArticleTag extends BaseEntity {
 
-    @Column(nullable = false)
-    private String title;
+    @Column(nullable = false, length = 50, unique = true)
+    @Enumerated(EnumType.STRING)
+    private ArticleTagName name;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String content;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
+    @ManyToMany(mappedBy = "tags")
     @ToString.Exclude
-    private User author;
+    private Set<Article> articles = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(
-            name = "article_game",
-            joinColumns = @JoinColumn(name = "article_id"),
-            inverseJoinColumns = @JoinColumn(name = "game_id")
-    )
-    @ToString.Exclude
-    private Set<Game> games = new HashSet<>();
+    public enum ArticleTagName {
+        GUIDE,
+        REVIEW,
+        COMPARING,
+        COMPLETING,
+        MODS,
+        BUGS,
+        SETTINGS,
+        SECRETS,
+        THEORY,
+        PLOT,
+        NEWS
+    }
 
-    @ManyToMany
-    @JoinTable(
-            name = "article_tag_article",
-            joinColumns = @JoinColumn(name = "article_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
-    @ToString.Exclude
-    private Set<ArticleTag> tags = new HashSet<>();
+    public ArticleTag(ArticleTagName name) {
+        this.name = name;
+    }
 
     @Override
     public final boolean equals(Object o) {
@@ -65,8 +60,8 @@ public class Article extends BaseEntity {
         if (thisEffectiveClass != objectEffectiveClass) {
             return false;
         }
-        Article article = (Article) o;
-        return getId() != null && Objects.equals(getId(), article.getId());
+        ArticleTag that = (ArticleTag) o;
+        return getId() != null && Objects.equals(getId(), that.getId());
     }
 
     @Override
