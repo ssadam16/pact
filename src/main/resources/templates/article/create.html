@@ -70,14 +70,22 @@
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-tags-fill me-1" style="color: var(--accent-purple);"></i>
                                 Теги статьи
+                                <span id="tagsCounter" class="badge-role ms-2" style="font-size: 0.7rem;">0/5</span>
                             </label>
-                            <select class="form-select bg-transparent border-subtle" th:field="*{tagIds}" multiple size="4">
+                            <select class="form-select bg-transparent border-subtle" th:field="*{tagIds}" multiple size="5" id="tagSelect">
                                 <option th:each="tag : ${tags}"
                                         th:value="${tag.id}"
                                         th:text="${tag.name}">
                                 </option>
                             </select>
-                            <div class="form-text text-secondary-custom">Выберите теги для статьи (можно несколько)</div>
+                            <div class="form-text text-secondary-custom">
+                                <i class="bi bi-info-circle-fill"></i>
+                                Выберите до 5 тегов для статьи
+                            </div>
+                            <div id="tagError" class="invalid-feedback d-none" style="display: none;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Можно выбрать не более 5 тегов
+                            </div>
                         </div>
 
                         <div class="mb-4">

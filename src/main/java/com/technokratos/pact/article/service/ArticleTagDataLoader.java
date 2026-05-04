@@ -5,14 +5,11 @@ import com.technokratos.pact.article.repository.ArticleTagRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -24,13 +21,19 @@ public class ArticleTagDataLoader {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void loadDefaultTags() {
-        Set<ArticleTag> defaultTags = Arrays.stream(ArticleTag.ArticleTagName.values())
-                .map(ArticleTag::new)
-                .collect(Collectors.toSet());
+        boolean allExist = Arrays.stream(ArticleTag.ArticleTagName.values())
+                .allMatch(tagRepository::existsByName);
 
-        tagRepository.deleteAll();
-        tagRepository.saveAll(defaultTags);
+        if (!allExist) {
+            tagRepository.deleteAllInBatch();
 
-        log.info("Article tags are initialized");
+            Arrays.stream(ArticleTag.ArticleTagName.values())
+                    .map(ArticleTag::new)
+                    .forEach(tagRepository::save);
+
+            log.info("Article tags reinitialized");
+        } else {
+            log.info("Article tags already up to date");
+        }
     }
 }
