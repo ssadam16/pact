@@ -99,28 +99,41 @@ function renderSelectedGames() {
     const container = document.getElementById('selectedGamesContainer');
     const hiddenInput = document.getElementById('gameIds');
 
+    if (!container) return;
+
     container.innerHTML = selectedGames.map(game => `
         <div class="selected-item" data-game-id="${game.id}">
-            ${game.name}
+            ${escapeHtml(game.name)}
             <span class="remove-item" onclick="removeGame('${game.id}')">&times;</span>
         </div>
     `).join('');
 
-    hiddenInput.value = selectedGames.map(g => g.id).join(',');
+    const gameIdsValue = selectedGames.map(g => g.id).join(',');
+    if (hiddenInput) hiddenInput.value = gameIdsValue;
 }
 
 function renderSelectedTags() {
     const container = document.getElementById('selectedTagsContainer');
     const hiddenInput = document.getElementById('tagIds');
 
+    if (!container) return;
+
     container.innerHTML = selectedTags.map(tag => `
         <div class="selected-item" data-tag-id="${tag.id}">
-            ${tag.name}
+            ${escapeHtml(tag.name)}
             <span class="remove-item" onclick="removeTag('${tag.id}')">&times;</span>
         </div>
     `).join('');
 
-    hiddenInput.value = selectedTags.map(t => t.id).join(',');
+    const tagIdsValue = selectedTags.map(t => t.id).join(',');
+    if (hiddenInput) hiddenInput.value = tagIdsValue;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function removeGame(gameId) {
@@ -144,6 +157,12 @@ function addGame(game) {
     }
     selectedGames.push(game);
     renderSelectedGames();
+
+    const searchInput = document.getElementById('gameSearchInput');
+    const dropdown = document.getElementById('gameSearchDropdown');
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+
     return true;
 }
 
@@ -183,13 +202,29 @@ function initGameSearch() {
             dropdown.innerHTML = '<div class="game-search-item text-secondary-custom">Ничего не найдено</div>';
         } else {
             dropdown.innerHTML = filtered.map(game => `
-                <div class="game-search-item" onclick="addGame({id: '${game.id}', name: '${game.name.replace(/'/g, "\\'")}'})">
-                    ${game.name}
+                <div class="game-search-item" data-game-id="${game.id}" data-game-name="${escapeHtml(game.name).replace(/'/g, "\\'")}">
+                    ${escapeHtml(game.name)}
                 </div>
             `).join('');
+
+            const items = dropdown.querySelectorAll('.game-search-item');
+            items.forEach(item => {
+                item.removeEventListener('click', handleGameClick);
+                item.addEventListener('click', handleGameClick);
+            });
         }
         dropdown.style.display = 'block';
     });
+
+    function handleGameClick(e) {
+        const item = e.currentTarget;
+        const gameId = item.getAttribute('data-game-id');
+        const gameName = item.getAttribute('data-game-name');
+        const game = allGames.find(g => g.id === gameId);
+        if (game) {
+            addGame(game);
+        }
+    }
 
     document.addEventListener('click', function(e) {
         if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
@@ -198,19 +233,46 @@ function initGameSearch() {
     });
 }
 
-function initTagSelect() {
-    const tagSelect = document.getElementById('tagSelect');
-    if (!tagSelect) return;
+function initCustomTagSelect() {
+    const trigger = document.getElementById('tagTrigger');
+    const dropdown = document.getElementById('tagDropdown');
+    const searchInput = document.getElementById('tagSearchInput');
+    const optionsContainer = document.getElementById('tagOptions');
 
-    tagSelect.addEventListener('change', function() {
-        const selectedId = this.value;
-        if (!selectedId) return;
+    if (!trigger) return;
 
-        const tag = allTags.find(t => t.id === selectedId);
-        if (tag) {
-            addTag(tag);
+    trigger.addEventListener('click', function() {
+        const isVisible = dropdown.style.display === 'block';
+        dropdown.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible && searchInput) {
+            searchInput.value = '';
+            filterTagOptions('');
         }
-        this.value = '';
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            filterTagOptions(this.value.toLowerCase());
+        });
+    }
+
+    function filterTagOptions(query) {
+        if (!optionsContainer) return;
+
+        const originalOptions = optionsContainer.querySelectorAll('.custom-select-option');
+        originalOptions.forEach(option => {
+            const tagName = option.getAttribute('data-tag-name');
+            if (tagName) {
+                const isVisible = tagName.toLowerCase().includes(query);
+                option.style.display = isVisible ? 'block' : 'none';
+            }
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
     });
 }
 
@@ -224,8 +286,8 @@ function submitArticle() {
         return;
     }
 
-    const emptyContent = content === '<p><br></p>' || content === '' || content === '<p></p>';
-    if (emptyContent || content.length < 300) {
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    if (textContent.length < 300) {
         showNotification('Содержание статьи должно быть не менее 300 символов', 'error');
         return;
     }
@@ -234,11 +296,39 @@ function submitArticle() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    allGames = window.gamesData || [];
-    allTags = window.tagsData || [];
+    if (window.gamesData && Array.isArray(window.gamesData)) {
+        allGames = window.gamesData;
+    } else {
+        console.error('gamesData is not defined or not an array');
+    }
+
+    if (window.tagsData && Array.isArray(window.tagsData)) {
+        allTags = window.tagsData;
+
+        const optionsContainer = document.getElementById('tagOptions');
+        if (optionsContainer) {
+            optionsContainer.innerHTML = '';
+            allTags.forEach(tag => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'custom-select-option';
+                optionDiv.setAttribute('data-tag-id', tag.id);
+                optionDiv.setAttribute('data-tag-name', tag.name);
+                optionDiv.innerHTML = `<span>${escapeHtml(tag.name)}</span>`;
+                optionDiv.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    addTag({ id: tag.id, name: tag.name });
+                    const dropdown = document.getElementById('tagDropdown');
+                    if (dropdown) dropdown.style.display = 'none';
+                });
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+    } else {
+        console.error('tagsData is not defined or not an array');
+    }
 
     initGameSearch();
-    initTagSelect();
+    initCustomTagSelect();
 
     const existingGameIds = document.getElementById('gameIds')?.value;
     if (existingGameIds) {
