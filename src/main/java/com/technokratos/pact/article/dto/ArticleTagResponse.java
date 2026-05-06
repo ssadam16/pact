@@ -8,4 +8,7 @@ public record ArticleTagResponse (
         UUID id,
         ArticleTag.ArticleTagName name
 ) {
+    public String getName() {
+        return name != null ? name.toString() : null;
+    }
 }

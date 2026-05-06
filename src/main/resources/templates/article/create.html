@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <link th:href="@{/css/main.css}" rel="stylesheet">
+    <link th:href="@{/css/article-create.css}" rel="stylesheet">
 
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
@@ -38,6 +39,12 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <span th:text="${success}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
                     <form th:action="@{/article/create}" th:object="${articleCreateRequest}" method="post" id="articleForm">
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
@@ -47,45 +54,55 @@
                             <input type="text"
                                    class="form-control bg-transparent border-subtle"
                                    th:field="*{title}"
-                                   placeholder="Введите название статьи"
-                                   required>
-                            <div class="form-text text-secondary-custom">Придумайте яркое и понятное название</div>
+                                   th:errorclass="is-invalid"
+                                   placeholder="Введите название статьи">
+                            <div th:if="${#fields.hasErrors('title')}"
+                                 th:errors="*{title}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                            <div class="form-text text-secondary-custom">Придумайте яркое и понятное название (минимум 10 символов)</div>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-controller me-1" style="color: var(--accent-purple);"></i>
-                                Связанные игры
+                                Связанные игры (максимум 3)
                             </label>
-                            <select class="form-select bg-transparent border-subtle" th:field="*{gameIds}" multiple size="3">
-                                <option th:each="game : ${games}"
-                                        th:value="${game.id}"
-                                        th:text="${game.name}">
-                                </option>
-                            </select>
-                            <div class="form-text text-secondary-custom">Выберите игры, к которым относится статья (можно несколько)</div>
+                            <div class="position-relative">
+                                <input type="text"
+                                       class="form-control bg-transparent border-subtle"
+                                       id="gameSearchInput"
+                                       placeholder="Поиск игры..."
+                                       autocomplete="off">
+                                <div id="gameSearchDropdown" class="game-search-dropdown" style="display: none;"></div>
+                            </div>
+                            <div id="selectedGamesContainer" class="selected-items-container mt-2"></div>
+                            <input type="hidden" th:field="*{gameIds}" id="gameIds">
+                            <div th:if="${#fields.hasErrors('gameIds')}"
+                                 th:errors="*{gameIds}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                            <div class="form-text text-secondary-custom">Начните вводить название игры для поиска</div>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-tags-fill me-1" style="color: var(--accent-purple);"></i>
-                                Теги статьи
-                                <span id="tagsCounter" class="badge-role ms-2" style="font-size: 0.7rem;">0/5</span>
+                                Теги статьи (максимум 5)
                             </label>
-                            <select class="form-select bg-transparent border-subtle" th:field="*{tagIds}" multiple size="5" id="tagSelect">
-                                <option th:each="tag : ${tags}"
-                                        th:value="${tag.id}"
-                                        th:text="${tag.name}">
-                                </option>
-                            </select>
-                            <div class="form-text text-secondary-custom">
-                                <i class="bi bi-info-circle-fill"></i>
-                                Выберите до 5 тегов для статьи
+                            <div class="position-relative">
+                                <select class="form-select bg-transparent border-subtle" id="tagSelect">
+                                    <option value="">-- Выберите тег --</option>
+                                    <option th:each="tag : ${tags}"
+                                            th:value="${tag.id}"
+                                            th:text="${tag.name}">
+                                    </option>
+                                </select>
                             </div>
-                            <div id="tagError" class="invalid-feedback d-none" style="display: none;">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                Можно выбрать не более 5 тегов
-                            </div>
+                            <div id="selectedTagsContainer" class="selected-items-container mt-2"></div>
+                            <input type="hidden" th:field="*{tagIds}" id="tagIds">
+                            <div th:if="${#fields.hasErrors('tagIds')}"
+                                 th:errors="*{tagIds}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                            <div class="form-text text-secondary-custom">Выберите тег из списка, он добавится в виде плашки</div>
                         </div>
 
                         <div class="mb-4">
@@ -95,6 +112,9 @@
                             </label>
                             <div id="editor"></div>
                             <input type="hidden" th:field="*{content}" id="content">
+                            <div th:if="${#fields.hasErrors('content')}"
+                                 th:errors="*{content}"
+                                 class="invalid-feedback d-block small mt-1"></div>
                             <div class="form-text text-secondary-custom mt-2">
                                 <i class="bi bi-info-circle-fill"></i>
                                 Используйте панель инструментов для форматирования. Картинки загружаются автоматически.
@@ -120,6 +140,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script th:inline="javascript">
+    window.gamesData = /*[[${games}]]*/ [];
+    window.tagsData = /*[[${tags}]]*/ [];
+</script>
 <script th:src="@{/js/article-create.js}"></script>
 </body>
 </html>

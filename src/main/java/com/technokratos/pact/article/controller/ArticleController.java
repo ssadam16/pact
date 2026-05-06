@@ -35,23 +35,23 @@ public class ArticleController {
 
     @PostMapping("/create")
     public String createArticle(
-            @Valid @ModelAttribute("article") ArticleCreateRequest request,
+            @Valid @ModelAttribute("articleCreateRequest") ArticleCreateRequest request,
             BindingResult bindingResult,
             RedirectAttributes redirectAttributes,
             @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute(
-                    "org.springframework.validation.BindingResult.article",
+                    "org.springframework.validation.BindingResult.articleCreateRequest",
                     bindingResult
             );
-            redirectAttributes.addFlashAttribute("article", request);
-            redirectAttributes.addFlashAttribute("error", "Пожалуйста, исправьте ошибки в форме");
+            redirectAttributes.addFlashAttribute("articleCreateRequest", request);
 
             return "redirect:/article/create";
         }
 
         UUID savedArticleId = articleService.create(request, currentUser.getId());
+        redirectAttributes.addFlashAttribute("success", "Статья успешно создана!");
 
         return "redirect:/article/%s".formatted(savedArticleId);
     }

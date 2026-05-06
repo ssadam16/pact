@@ -1,5 +1,10 @@
 const uploadUrl = '/api/images/upload';
 
+let selectedGames = [];
+let selectedTags = [];
+let allGames = [];
+let allTags = [];
+
 function getCsrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
 }
@@ -37,7 +42,6 @@ async function imageHandler() {
 
     input.onchange = async () => {
         const file = input.files[0];
-
         if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
@@ -53,20 +57,15 @@ async function imageHandler() {
 
         const formData = new FormData();
         formData.append('image', file);
-
         const range = quill.getSelection(true);
-
         quill.insertEmbed(range.index, 'image', '/loading.svg', 'user');
 
         try {
             const response = await fetch(uploadUrl, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    [getCsrfHeader()]: getCsrfToken()
-                }
+                headers: { [getCsrfHeader()]: getCsrfToken() }
             });
-
             const data = await response.json();
 
             if (response.ok && data.url) {
@@ -92,69 +91,142 @@ function showNotification(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-
     document.body.appendChild(alertDiv);
-
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
-function updateTagsCounter() {
-    const tagSelect = document.getElementById('tagSelect');
-    const selectedCount = tagSelect.selectedOptions.length;
-    const counterSpan = document.getElementById('tagsCounter');
-    const tagError = document.getElementById('tagError');
+function renderSelectedGames() {
+    const container = document.getElementById('selectedGamesContainer');
+    const hiddenInput = document.getElementById('gameIds');
 
-    counterSpan.textContent = `${selectedCount}/5`;
+    container.innerHTML = selectedGames.map(game => `
+        <div class="selected-item" data-game-id="${game.id}">
+            ${game.name}
+            <span class="remove-item" onclick="removeGame('${game.id}')">&times;</span>
+        </div>
+    `).join('');
 
-    if (selectedCount > 5) {
-        counterSpan.style.color = '#f87171';
-        tagError.classList.remove('d-none');
-        tagError.style.display = 'block';
-        tagSelect.classList.add('is-invalid');
-    } else {
-        counterSpan.style.color = '';
-        tagError.classList.add('d-none');
-        tagError.style.display = 'none';
-        tagSelect.classList.remove('is-invalid');
-    }
+    hiddenInput.value = selectedGames.map(g => g.id).join(',');
 }
 
-function validateTags() {
-    const tagSelect = document.getElementById('tagSelect');
-    const selectedCount = tagSelect.selectedOptions.length;
+function renderSelectedTags() {
+    const container = document.getElementById('selectedTagsContainer');
+    const hiddenInput = document.getElementById('tagIds');
 
-    if (selectedCount > 5) {
-        showNotification('Можно выбрать не более 5 тегов', 'error');
+    container.innerHTML = selectedTags.map(tag => `
+        <div class="selected-item" data-tag-id="${tag.id}">
+            ${tag.name}
+            <span class="remove-item" onclick="removeTag('${tag.id}')">&times;</span>
+        </div>
+    `).join('');
+
+    hiddenInput.value = selectedTags.map(t => t.id).join(',');
+}
+
+function removeGame(gameId) {
+    selectedGames = selectedGames.filter(g => g.id !== gameId);
+    renderSelectedGames();
+}
+
+function removeTag(tagId) {
+    selectedTags = selectedTags.filter(t => t.id !== tagId);
+    renderSelectedTags();
+}
+
+function addGame(game) {
+    if (selectedGames.length >= 3) {
+        showNotification('Нельзя выбрать более 3 игр', 'error');
         return false;
     }
-
+    if (selectedGames.some(g => g.id === game.id)) {
+        showNotification('Эта игра уже добавлена', 'error');
+        return false;
+    }
+    selectedGames.push(game);
+    renderSelectedGames();
     return true;
 }
 
+function addTag(tag) {
+    if (selectedTags.length >= 5) {
+        showNotification('Нельзя выбрать более 5 тегов', 'error');
+        return false;
+    }
+    if (selectedTags.some(t => t.id === tag.id)) {
+        showNotification('Этот тег уже добавлен', 'error');
+        return false;
+    }
+    selectedTags.push(tag);
+    renderSelectedTags();
+    return true;
+}
+
+function initGameSearch() {
+    const searchInput = document.getElementById('gameSearchInput');
+    const dropdown = document.getElementById('gameSearchDropdown');
+
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        if (query.length < 2) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const filtered = allGames.filter(game =>
+            game.name.toLowerCase().includes(query) &&
+            !selectedGames.some(g => g.id === game.id)
+        );
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="game-search-item text-secondary-custom">Ничего не найдено</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(game => `
+                <div class="game-search-item" onclick="addGame({id: '${game.id}', name: '${game.name.replace(/'/g, "\\'")}'})">
+                    ${game.name}
+                </div>
+            `).join('');
+        }
+        dropdown.style.display = 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
+function initTagSelect() {
+    const tagSelect = document.getElementById('tagSelect');
+    if (!tagSelect) return;
+
+    tagSelect.addEventListener('change', function() {
+        const selectedId = this.value;
+        if (!selectedId) return;
+
+        const tag = allTags.find(t => t.id === selectedId);
+        if (tag) {
+            addTag(tag);
+        }
+        this.value = '';
+    });
+}
+
 function submitArticle() {
-    if (!validateTags()) {
-        return;
-    }
-
     const content = quill.root.innerHTML;
-    const hiddenContent = document.getElementById('content');
-
-    if (hiddenContent) {
-        hiddenContent.value = content;
-    }
+    document.getElementById('content').value = content;
 
     const title = document.querySelector('[name="title"]')?.value;
-
-    if (!title || title.trim() === '') {
-        showNotification('Введите название статьи', 'error');
+    if (!title || title.trim().length < 10) {
+        showNotification('Название статьи должно быть не менее 10 символов', 'error');
         return;
     }
 
     const emptyContent = content === '<p><br></p>' || content === '' || content === '<p></p>';
-    if (emptyContent) {
-        showNotification('Заполните содержание статьи', 'error');
+    if (emptyContent || content.length < 300) {
+        showNotification('Содержание статьи должно быть не менее 300 символов', 'error');
         return;
     }
 
@@ -162,19 +234,33 @@ function submitArticle() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const tagSelect = document.getElementById('tagSelect');
+    allGames = window.gamesData || [];
+    allTags = window.tagsData || [];
 
-    if (tagSelect) {
-        updateTagsCounter();
+    initGameSearch();
+    initTagSelect();
 
-        tagSelect.addEventListener('change', function(e) {
-            const selectedCount = tagSelect.selectedOptions.length;
-
-            if (selectedCount > 5) {
-                showNotification('Можно выбрать не более 5 тегов', 'error');
+    const existingGameIds = document.getElementById('gameIds')?.value;
+    if (existingGameIds) {
+        const ids = existingGameIds.split(',').filter(id => id);
+        ids.forEach(id => {
+            const game = allGames.find(g => g.id === id);
+            if (game && !selectedGames.some(g => g.id === id)) {
+                selectedGames.push(game);
             }
-
-            updateTagsCounter();
         });
+        renderSelectedGames();
+    }
+
+    const existingTagIds = document.getElementById('tagIds')?.value;
+    if (existingTagIds) {
+        const ids = existingTagIds.split(',').filter(id => id);
+        ids.forEach(id => {
+            const tag = allTags.find(t => t.id === id);
+            if (tag && !selectedTags.some(t => t.id === id)) {
+                selectedTags.push(tag);
+            }
+        });
+        renderSelectedTags();
     }
 });
