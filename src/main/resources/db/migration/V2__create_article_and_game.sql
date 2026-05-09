@@ -10,6 +10,7 @@ create table if not exists article (
 create table if not exists game (
     id uuid primary key default gen_random_uuid(),
     name varchar(255) not null,
+    developer varchar(255) not null,
     steam_link varchar(500),
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp

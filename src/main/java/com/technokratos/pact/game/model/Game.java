@@ -25,6 +25,9 @@ public class Game extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String developer;
+
     @Column(nullable = false, length = 500)
     private String steamLink;
 

@@ -1,5 +1,10 @@
 const uploadUrl = '/api/images/upload';
 
+let selectedGames = [];
+let selectedTags = [];
+let allGames = [];
+let allTags = [];
+
 function getCsrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
 }
@@ -37,7 +42,6 @@ async function imageHandler() {
 
     input.onchange = async () => {
         const file = input.files[0];
-
         if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
@@ -53,20 +57,15 @@ async function imageHandler() {
 
         const formData = new FormData();
         formData.append('image', file);
-
         const range = quill.getSelection(true);
-
         quill.insertEmbed(range.index, 'image', '/loading.svg', 'user');
 
         try {
             const response = await fetch(uploadUrl, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    [getCsrfHeader()]: getCsrfToken()
-                }
+                headers: { [getCsrfHeader()]: getCsrfToken() }
             });
-
             const data = await response.json();
 
             if (response.ok && data.url) {
@@ -92,69 +91,204 @@ function showNotification(message, type = 'info') {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-
     document.body.appendChild(alertDiv);
-
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
-function updateTagsCounter() {
-    const tagSelect = document.getElementById('tagSelect');
-    const selectedCount = tagSelect.selectedOptions.length;
-    const counterSpan = document.getElementById('tagsCounter');
-    const tagError = document.getElementById('tagError');
+function renderSelectedGames() {
+    const container = document.getElementById('selectedGamesContainer');
+    const hiddenInput = document.getElementById('gameIds');
 
-    counterSpan.textContent = `${selectedCount}/5`;
+    if (!container) return;
 
-    if (selectedCount > 5) {
-        counterSpan.style.color = '#f87171';
-        tagError.classList.remove('d-none');
-        tagError.style.display = 'block';
-        tagSelect.classList.add('is-invalid');
-    } else {
-        counterSpan.style.color = '';
-        tagError.classList.add('d-none');
-        tagError.style.display = 'none';
-        tagSelect.classList.remove('is-invalid');
-    }
+    container.innerHTML = selectedGames.map(game => `
+        <div class="selected-item" data-game-id="${game.id}">
+            ${escapeHtml(game.name)}
+            <span class="remove-item" onclick="removeGame('${game.id}')">&times;</span>
+        </div>
+    `).join('');
+
+    const gameIdsValue = selectedGames.map(g => g.id).join(',');
+    if (hiddenInput) hiddenInput.value = gameIdsValue;
 }
 
-function validateTags() {
-    const tagSelect = document.getElementById('tagSelect');
-    const selectedCount = tagSelect.selectedOptions.length;
+function renderSelectedTags() {
+    const container = document.getElementById('selectedTagsContainer');
+    const hiddenInput = document.getElementById('tagIds');
 
-    if (selectedCount > 5) {
-        showNotification('Можно выбрать не более 5 тегов', 'error');
+    if (!container) return;
+
+    container.innerHTML = selectedTags.map(tag => `
+        <div class="selected-item" data-tag-id="${tag.id}">
+            ${escapeHtml(tag.name)}
+            <span class="remove-item" onclick="removeTag('${tag.id}')">&times;</span>
+        </div>
+    `).join('');
+
+    const tagIdsValue = selectedTags.map(t => t.id).join(',');
+    if (hiddenInput) hiddenInput.value = tagIdsValue;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function removeGame(gameId) {
+    selectedGames = selectedGames.filter(g => g.id !== gameId);
+    renderSelectedGames();
+}
+
+function removeTag(tagId) {
+    selectedTags = selectedTags.filter(t => t.id !== tagId);
+    renderSelectedTags();
+}
+
+function addGame(game) {
+    if (selectedGames.length >= 3) {
+        showNotification('Нельзя выбрать более 3 игр', 'error');
         return false;
     }
+    if (selectedGames.some(g => g.id === game.id)) {
+        showNotification('Эта игра уже добавлена', 'error');
+        return false;
+    }
+    selectedGames.push(game);
+    renderSelectedGames();
+
+    const searchInput = document.getElementById('gameSearchInput');
+    const dropdown = document.getElementById('gameSearchDropdown');
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
 
     return true;
 }
 
+function addTag(tag) {
+    if (selectedTags.length >= 5) {
+        showNotification('Нельзя выбрать более 5 тегов', 'error');
+        return false;
+    }
+    if (selectedTags.some(t => t.id === tag.id)) {
+        showNotification('Этот тег уже добавлен', 'error');
+        return false;
+    }
+    selectedTags.push(tag);
+    renderSelectedTags();
+    return true;
+}
+
+function initGameSearch() {
+    const searchInput = document.getElementById('gameSearchInput');
+    const dropdown = document.getElementById('gameSearchDropdown');
+
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        if (query.length < 2) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const filtered = allGames.filter(game =>
+            game.name.toLowerCase().includes(query) &&
+            !selectedGames.some(g => g.id === game.id)
+        );
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div class="game-search-item text-secondary-custom">Ничего не найдено</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(game => `
+                <div class="game-search-item" data-game-id="${game.id}" data-game-name="${escapeHtml(game.name).replace(/'/g, "\\'")}">
+                    ${escapeHtml(game.name)}
+                </div>
+            `).join('');
+
+            const items = dropdown.querySelectorAll('.game-search-item');
+            items.forEach(item => {
+                item.removeEventListener('click', handleGameClick);
+                item.addEventListener('click', handleGameClick);
+            });
+        }
+        dropdown.style.display = 'block';
+    });
+
+    function handleGameClick(e) {
+        const item = e.currentTarget;
+        const gameId = item.getAttribute('data-game-id');
+        const gameName = item.getAttribute('data-game-name');
+        const game = allGames.find(g => g.id === gameId);
+        if (game) {
+            addGame(game);
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
+function initCustomTagSelect() {
+    const trigger = document.getElementById('tagTrigger');
+    const dropdown = document.getElementById('tagDropdown');
+    const searchInput = document.getElementById('tagSearchInput');
+    const optionsContainer = document.getElementById('tagOptions');
+
+    if (!trigger) return;
+
+    trigger.addEventListener('click', function() {
+        const isVisible = dropdown.style.display === 'block';
+        dropdown.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible && searchInput) {
+            searchInput.value = '';
+            filterTagOptions('');
+        }
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            filterTagOptions(this.value.toLowerCase());
+        });
+    }
+
+    function filterTagOptions(query) {
+        if (!optionsContainer) return;
+
+        const originalOptions = optionsContainer.querySelectorAll('.custom-select-option');
+        originalOptions.forEach(option => {
+            const tagName = option.getAttribute('data-tag-name');
+            if (tagName) {
+                const isVisible = tagName.toLowerCase().includes(query);
+                option.style.display = isVisible ? 'block' : 'none';
+            }
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+}
+
 function submitArticle() {
-    if (!validateTags()) {
-        return;
-    }
-
     const content = quill.root.innerHTML;
-    const hiddenContent = document.getElementById('content');
-
-    if (hiddenContent) {
-        hiddenContent.value = content;
-    }
+    document.getElementById('content').value = content;
 
     const title = document.querySelector('[name="title"]')?.value;
-
-    if (!title || title.trim() === '') {
-        showNotification('Введите название статьи', 'error');
+    if (!title || title.trim().length < 10) {
+        showNotification('Название статьи должно быть не менее 10 символов', 'error');
         return;
     }
 
-    const emptyContent = content === '<p><br></p>' || content === '' || content === '<p></p>';
-    if (emptyContent) {
-        showNotification('Заполните содержание статьи', 'error');
+    const textContent = content.replace(/<[^>]*>/g, '').trim();
+    if (textContent.length < 300) {
+        showNotification('Содержание статьи должно быть не менее 300 символов', 'error');
         return;
     }
 
@@ -162,19 +296,61 @@ function submitArticle() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const tagSelect = document.getElementById('tagSelect');
+    if (window.gamesData && Array.isArray(window.gamesData)) {
+        allGames = window.gamesData;
+    } else {
+        console.error('gamesData is not defined or not an array');
+    }
 
-    if (tagSelect) {
-        updateTagsCounter();
+    if (window.tagsData && Array.isArray(window.tagsData)) {
+        allTags = window.tagsData;
 
-        tagSelect.addEventListener('change', function(e) {
-            const selectedCount = tagSelect.selectedOptions.length;
+        const optionsContainer = document.getElementById('tagOptions');
+        if (optionsContainer) {
+            optionsContainer.innerHTML = '';
+            allTags.forEach(tag => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'custom-select-option';
+                optionDiv.setAttribute('data-tag-id', tag.id);
+                optionDiv.setAttribute('data-tag-name', tag.name);
+                optionDiv.innerHTML = `<span>${escapeHtml(tag.name)}</span>`;
+                optionDiv.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    addTag({ id: tag.id, name: tag.name });
+                    const dropdown = document.getElementById('tagDropdown');
+                    if (dropdown) dropdown.style.display = 'none';
+                });
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+    } else {
+        console.error('tagsData is not defined or not an array');
+    }
 
-            if (selectedCount > 5) {
-                showNotification('Можно выбрать не более 5 тегов', 'error');
+    initGameSearch();
+    initCustomTagSelect();
+
+    const existingGameIds = document.getElementById('gameIds')?.value;
+    if (existingGameIds) {
+        const ids = existingGameIds.split(',').filter(id => id);
+        ids.forEach(id => {
+            const game = allGames.find(g => g.id === id);
+            if (game && !selectedGames.some(g => g.id === id)) {
+                selectedGames.push(game);
             }
-
-            updateTagsCounter();
         });
+        renderSelectedGames();
+    }
+
+    const existingTagIds = document.getElementById('tagIds')?.value;
+    if (existingTagIds) {
+        const ids = existingTagIds.split(',').filter(id => id);
+        ids.forEach(id => {
+            const tag = allTags.find(t => t.id === id);
+            if (tag && !selectedTags.some(t => t.id === id)) {
+                selectedTags.push(tag);
+            }
+        });
+        renderSelectedTags();
     }
 });
