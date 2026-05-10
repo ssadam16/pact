@@ -32,6 +32,7 @@ public class ArticleService {
     private final ArticleMapper articleMapper;
     private final UserRepository userRepository;
     private final ArticleTagRepository tagRepository;
+    private final CommentService commentService;
 
     @Transactional
     public UUID create(ArticleCreateRequest request, UUID authorId) {
@@ -67,6 +68,8 @@ public class ArticleService {
                 articleRepository.findById(articleId)
                         .orElseThrow(() -> ArticleNotFoundException.byId(articleId))
         );
+
+        articleResponse.setComments(commentService.getCommentsByArticleId(articleId));
 
         log.info("Returning Article (ID={})", articleId);
 

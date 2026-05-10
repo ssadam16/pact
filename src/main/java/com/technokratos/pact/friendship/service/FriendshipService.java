@@ -74,14 +74,14 @@ public class FriendshipService {
     public Set<UserShortProfileResponse> getFriends(UUID userId) {
         log.info("Returning friends set for user (ID={})", userId);
         return friendshipRepository.findFriendIdsByUserIdAndStatus(userId, Friendship.FriendshipStatus.ACCEPTED).stream()
-                .map(id -> userService.getShortProfile(id))
+                .map(userService::getShortProfile)
                 .collect(Collectors.toSet());
     }
 
     public Set<FriendshipIncomeRequest> getFriendshipIncomeRequests(UUID toWhom) {
         log.info("Returning friendship requests set for user (ID={})", toWhom);
         return friendshipRepository.findFriendshipByToWhomAndStatus(toWhom, Friendship.FriendshipStatus.PENDING).stream()
-                .map(f -> friendshipMapper.toFriendshipIncomeRequest(f))
+                .map(friendshipMapper::toFriendshipIncomeRequest)
                 .collect(Collectors.toSet());
     }
 

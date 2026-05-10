@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -19,4 +20,5 @@ public class ArticleResponse{
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
         private Set<ArticleTagResponse> tags;
+        private List<CommentResponse> comments;
 }
