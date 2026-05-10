@@ -41,7 +41,7 @@ public class UserService {
         UserShortProfileResponse profile = userMapper.toUserShortProfileResponse(user);
         profile.setAvatarUrl(avatarService.getAvatarUrl(user.getAvatarFilename()));
 
-        log.info("Returning short user profile by username (ID={}, username={})", profile.getId(), profile.getUsername());
+        log.info("Returning short user profile by username (ID={}, username={}, avatarUrl={})", profile.getId(), profile.getUsername(), profile.getAvatarUrl());
 
         return profile;
     }

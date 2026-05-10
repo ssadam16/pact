@@ -58,6 +58,7 @@ public class ArticleController {
 
     @GetMapping("/{id}")
     public String articlePage(@PathVariable UUID id, Model model) {
+
         model.addAttribute("article", articleService.getArticle(id));
         return "article/article";
     }
