@@ -11,5 +11,11 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {UserMapper.class, ArticleMapper.class})
 public interface CommentMapper {
     CommentResponse toCommentResponse(Comment comment);
-    Page<CommentResponse> toCommentResponsePage(Page<Comment> comments);
+
+    default Page<CommentResponse> toCommentResponsePage(Page<Comment> comments) {
+        if (comments == null || comments.isEmpty()) {
+            return null;
+        }
+        return comments.map(this::toCommentResponse);
+    }
 }

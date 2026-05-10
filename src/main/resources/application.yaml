@@ -1,6 +1,6 @@
 logging:
   level:
-    ru.varyainc.platforma: TRACE
+    com.technokratos.pact: TRACE
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.transaction.interceptor: TRACE

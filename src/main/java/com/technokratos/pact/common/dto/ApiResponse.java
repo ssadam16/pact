@@ -1,6 +1,5 @@
-package com.technokratos.pact.common;
+package com.technokratos.pact.common.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.Map;

@@ -3,7 +3,7 @@ package com.technokratos.pact.article.controller;
 import com.technokratos.pact.article.dto.CommentCreateRequest;
 import com.technokratos.pact.article.dto.CommentResponse;
 import com.technokratos.pact.article.service.CommentService;
-import com.technokratos.pact.common.ApiResponse;
+import com.technokratos.pact.common.dto.ApiResponse;
 import com.technokratos.pact.security.model.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

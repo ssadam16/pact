@@ -8,6 +8,7 @@ import com.technokratos.pact.article.model.Article;
 import com.technokratos.pact.article.model.Comment;
 import com.technokratos.pact.article.repository.ArticleRepository;
 import com.technokratos.pact.article.repository.CommentRepository;
+import com.technokratos.pact.file.service.AvatarService;
 import com.technokratos.pact.user.exception.UserNotFoundException;
 import com.technokratos.pact.user.model.User;
 import com.technokratos.pact.user.repository.UserRepository;
@@ -31,6 +32,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
     private final ArticleRepository articleRepository;
+    private final AvatarService avatarService;
 
     public CommentResponse create(UUID authorId, CommentCreateRequest request) {
         User user = userRepository.findById(authorId)
@@ -54,8 +56,17 @@ public class CommentService {
         log.info("Returning comments for article with ID={}", articleId);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+        Page<Comment> commentPage = commentRepository.findByArticleId(articleId, pageable);
 
-        return commentMapper.toCommentResponsePage(commentRepository.findByArticleId(articleId, pageable));
+        return commentPage.map(comment -> {
+            CommentResponse response = commentMapper.toCommentResponse(comment);
+
+            String avatarUrl = avatarService.getAvatarUrl(comment.getAuthor().getAvatarFilename());
+
+            response.getAuthor().setAvatarUrl(avatarUrl);
+
+            return response;
+        });
     }
 
     public int getCommentsCount(UUID articleId) {

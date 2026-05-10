@@ -7,6 +7,7 @@ import com.technokratos.pact.article.mapper.ArticleMapper;
 import com.technokratos.pact.article.model.Article;
 import com.technokratos.pact.article.repository.ArticleRepository;
 import com.technokratos.pact.article.repository.ArticleTagRepository;
+import com.technokratos.pact.file.service.AvatarService;
 import com.technokratos.pact.game.model.Game;
 import com.technokratos.pact.game.repository.GameRepository;
 import com.technokratos.pact.user.exception.UserNotFoundException;
@@ -33,6 +34,7 @@ public class ArticleService {
     private final UserRepository userRepository;
     private final ArticleTagRepository tagRepository;
     private final CommentService commentService;
+    private final AvatarService avatarService;
 
     @Transactional
     public UUID create(ArticleCreateRequest request, UUID authorId) {
@@ -64,14 +66,16 @@ public class ArticleService {
     }
 
     public ArticleResponse getArticle(UUID articleId) {
-        ArticleResponse articleResponse = articleMapper.toArticleResponse(
-                articleRepository.findById(articleId)
-                        .orElseThrow(() -> ArticleNotFoundException.byId(articleId))
-        );
+        Article article = articleRepository.findById(articleId)
+                        .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
+
+        ArticleResponse articleResponse = articleMapper.toArticleResponse(article);
 
         articleResponse.setCommentsCount(commentService.getCommentsCount(articleId));
+        articleResponse.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(article.getAuthor().getAvatarFilename()));
 
         log.info("Returning Article (ID={})", articleId);
+        log.debug("Article's author's avatarUrl={}", articleResponse.getAuthor().getAvatarUrl());
 
         return articleResponse;
     }

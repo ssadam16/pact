@@ -10,10 +10,12 @@ import org.springframework.data.domain.Page;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @Builder
 public class ArticleResponse{
+        private UUID id;
         private String title;
         private String content;
         private UserShortProfileResponse author;

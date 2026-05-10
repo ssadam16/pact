@@ -28,6 +28,8 @@ public class DefaultAuthenticationSuccessHandler implements AuthenticationSucces
 
         req.getSession().removeAttribute("error");
 
+
+
         RequestCache requestCache = new HttpSessionRequestCache();
         SavedRequest savedRequest = requestCache.getRequest(req, resp);
 
