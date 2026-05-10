@@ -69,7 +69,7 @@ public class ArticleService {
                         .orElseThrow(() -> ArticleNotFoundException.byId(articleId))
         );
 
-        articleResponse.setComments(commentService.getCommentsByArticleId(articleId));
+        articleResponse.setCommentsCount(commentService.getCommentsCount(articleId));
 
         log.info("Returning Article (ID={})", articleId);
 

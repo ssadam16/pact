@@ -5,6 +5,7 @@ import com.technokratos.pact.game.dto.GameResponse;
 import com.technokratos.pact.user.dto.UserShortProfileResponse;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,5 +21,5 @@ public class ArticleResponse{
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
         private Set<ArticleTagResponse> tags;
-        private List<CommentResponse> comments;
+        private int commentsCount;
 }

@@ -13,6 +13,10 @@ import com.technokratos.pact.user.model.User;
 import com.technokratos.pact.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -46,8 +50,20 @@ public class CommentService {
         return commentMapper.toCommentResponse(commentRepository.save(comment));
     }
 
-    public List<CommentResponse> getCommentsByArticleId(UUID articleId) {
+    public Page<CommentResponse> getCommentsByArticleId(UUID articleId, int page, int size) {
         log.info("Returning comments for article with ID={}", articleId);
-        return commentMapper.toCommentResponseList(commentRepository.findAllByArticleId(articleId));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+
+        return commentMapper.toCommentResponsePage(commentRepository.findByArticleId(articleId, pageable));
+    }
+
+    public int getCommentsCount(UUID articleId) {
+        articleRepository.findById(articleId)
+                .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
+
+        log.info("Returning comments count for article with ID={}", articleId);
+
+        return commentRepository.countByArticleId(articleId);
     }
 }

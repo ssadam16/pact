@@ -7,16 +7,15 @@ import com.technokratos.pact.common.ApiResponse;
 import com.technokratos.pact.security.model.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/comments")
@@ -41,5 +40,13 @@ public class CommentRestController {
 
         CommentResponse response = commentService.create(currentUser.getId(), comment);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/byArticleId/{articleId}")
+    public ResponseEntity<Page<CommentResponse>> getCommentsByArticleId(@PathVariable UUID articleId,
+                                                                        @RequestParam(defaultValue = "0") int page,
+                                                                        @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(commentService.getCommentsByArticleId(articleId, page, size));
     }
 }
