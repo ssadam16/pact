@@ -1,0 +1,265 @@
+package com.technokratos.pact.chat.service;
+
+import com.technokratos.pact.chat.dto.*;
+import com.technokratos.pact.chat.exception.ChatNotFoundException;
+import com.technokratos.pact.chat.mapper.ChatMapper;
+import com.technokratos.pact.chat.mapper.ChatMessageMapper;
+import com.technokratos.pact.chat.model.Chat;
+import com.technokratos.pact.chat.model.ChatMessage;
+import com.technokratos.pact.chat.repository.ChatMessageRepository;
+import com.technokratos.pact.chat.repository.ChatRepository;
+import com.technokratos.pact.file.service.AvatarService;
+import com.technokratos.pact.user.dto.UserShortProfileResponse;
+import com.technokratos.pact.user.exception.UserNotFoundException;
+import com.technokratos.pact.user.model.User;
+import com.technokratos.pact.user.repository.UserRepository;
+import com.technokratos.pact.user.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class ChatService {
+
+    private final ChatRepository chatRepository;
+    private final ChatMessageRepository messageRepository;
+    private final UserRepository userRepository;
+    private final ChatMapper chatMapper;
+    private final ChatMessageMapper messageMapper;
+    private final ChatMediaService mediaService;
+    private final UserService userService;
+    private final AvatarService avatarService;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private static final int PAGE_SIZE = 30;
+    private static final int MAX_MESSAGE_LENGTH = 4096;
+
+    public ChatResponse createChat(ChatCreateRequest request, UUID currentUserId) {
+        log.info("Creating chat between users: {} and {}", currentUserId, request.getSecondUserId());
+
+        Optional<Chat> existingChat = chatRepository
+                .findByFirstUserIdAndSecondUserId(currentUserId, request.getSecondUserId());
+
+        if (existingChat.isPresent()) {
+            log.info("Chat already exists: {}", existingChat.get().getId());
+            return getChatResponse(existingChat.get(), currentUserId);
+        }
+
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> UserNotFoundException.byId(currentUserId));
+        User secondUser = userRepository.findById(request.getSecondUserId())
+                .orElseThrow(() -> UserNotFoundException.byId(request.getSecondUserId()));
+
+        Chat chat = Chat.builder()
+                .firstUser(currentUser)
+                .secondUser(secondUser)
+                .build();
+
+        chat = chatRepository.save(chat);
+
+        log.info("Chat created with id: {}", chat.getId());
+
+        return getChatResponse(chat, currentUserId);
+    }
+
+    public Page<ChatResponse> getUserChats(UUID userId, int page) {
+        log.info("Getting chats for user: {}, page: {}", userId, page);
+
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
+        Page<Chat> chats = chatRepository.findAllByUserId(userId, pageable);
+
+        return chats.map(chat -> getChatResponse(chat, userId));
+    }
+
+    public Page<MessageResponse> getChatMessages(UUID chatId, UUID userId, int page) {
+        log.info("Getting messages for chat: {}, user: {}, page: {}", chatId, userId, page);
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+
+        if (!chat.getFirstUser().getId().equals(userId) && !chat.getSecondUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
+        Page<ChatMessage> messages = messageRepository.findByChatIdOrderByCreatedAtAsc(chatId, pageable);
+
+        return messages.map(message -> toMessageResponse(message, userId));
+    }
+
+    public List<MessageResponse> sendMessage(UUID chatId, SendMessageRequest request, UUID currentUserId) {
+        log.info("Sending message to chat: {} from user: {}", chatId, currentUserId);
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+
+        User author = userRepository.findById(currentUserId)
+                .orElseThrow(() -> UserNotFoundException.byId(currentUserId));
+
+        User recipient = getChatRecipient(chat, currentUserId);
+
+        String content = request.getContent() != null ? request.getContent() : "";
+
+        List<String> contentParts = splitMessageByLength(content, MAX_MESSAGE_LENGTH);
+
+        List<MessageResponse> sentMessages = new ArrayList<>();
+
+        for (int i = 0; i < contentParts.size(); i++) {
+            String partContent = contentParts.get(i);
+            boolean isLastPart = (i == contentParts.size() - 1);
+
+            ChatMessage message = ChatMessage.builder()
+                    .content(partContent)
+                    .author(author)
+                    .chat(chat)
+                    .status(ChatMessage.MessageStatus.SENT)
+                    .isEdited(false)
+                    .replyToMessage(request.getReplyToMessageId() != null ?
+                            messageRepository.findById(request.getReplyToMessageId()).orElse(null) : null)
+                    .build();
+
+            message = messageRepository.save(message);
+
+            // Если есть медиа и это последняя часть сообщения
+            if (request.getMediaList() != null && !request.getMediaList().isEmpty() && isLastPart) {
+                // Здесь нужно было бы обработать медиа, но для загрузки медиа нужен отдельный endpoint
+                // Поэтому медиа загружаются отдельно, а здесь только привязываем
+            }
+
+            MessageResponse response = toMessageResponse(message, currentUserId);
+            sentMessages.add(response);
+
+            messagingTemplate.convertAndSendToUser(
+                    recipient.getUsername(),
+                    "/queue/messages",
+                    response
+            );
+
+            messagingTemplate.convertAndSendToUser(
+                    author.getUsername(),
+                    "/queue/messages",
+                    response
+            );
+        }
+
+        return sentMessages;
+    }
+
+    public void markMessagesAsRead(UUID chatId, UUID messageId, UUID currentUserId) {
+        log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);
+
+        int updated = messageRepository.markMessagesAsRead(chatId, currentUserId);
+        log.info("Marked {} messages as read", updated);
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+
+        User recipient = getChatRecipient(chat, currentUserId);
+
+        messagingTemplate.convertAndSendToUser(
+                recipient.getUsername(),
+                "/queue/read",
+                Map.of("chatId", chatId, "readBy", currentUserId, "readUpToMessageId", messageId)
+        );
+    }
+
+    public void sendTypingStatus(UUID chatId, Boolean isTyping, UUID currentUserId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+
+        User recipient = getChatRecipient(chat, currentUserId);
+
+        messagingTemplate.convertAndSendToUser(
+                recipient.getUsername(),
+                "/queue/typing",
+                Map.of("chatId", chatId, "userId", currentUserId, "isTyping", isTyping)
+        );
+    }
+
+    private ChatResponse getChatResponse(Chat chat, UUID currentUserId) {
+        User interlocutor = getChatRecipient(chat, currentUserId);
+        UserShortProfileResponse interlocutorProfile = userService.getShortProfile(interlocutor.getId());
+
+        Pageable pageable = PageRequest.of(0, 1, Sort.by("createdAt").descending());
+        Page<ChatMessage> lastMessagePage = messageRepository.findByChatIdOrderByCreatedAtAsc(chat.getId(), pageable);
+
+        MessageShortResponse lastMessage = null;
+        if (!lastMessagePage.isEmpty()) {
+            ChatMessage lastMsg = lastMessagePage.getContent().get(0);
+            lastMessage = messageMapper.toShortResponse(lastMsg);
+            if (lastMsg.getAuthor() != null && lastMsg.getAuthor().getAvatarFilename() != null) {
+                lastMessage.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(lastMsg.getAuthor().getAvatarFilename()));
+            }
+        }
+
+        long unreadCount = messageRepository.countUnreadMessages(chat.getId(), currentUserId);
+
+        return ChatResponse.builder()
+                .id(chat.getId())
+                .interlocutor(interlocutorProfile)
+                .lastMessage(lastMessage)
+                .unreadCount(unreadCount)
+                .build();
+    }
+
+    private User getChatRecipient(Chat chat, UUID currentUserId) {
+        if (chat.getFirstUser().getId().equals(currentUserId)) {
+            return chat.getSecondUser();
+        } else {
+            return chat.getFirstUser();
+        }
+    }
+
+    private MessageResponse toMessageResponse(ChatMessage message, UUID currentUserId) {
+        MessageResponse response = messageMapper.toResponse(message);
+
+        if (message.getAuthor() != null && message.getAuthor().getAvatarFilename() != null) {
+            response.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(message.getAuthor().getAvatarFilename()));
+        }
+
+        if (message.getReplyToMessage() != null) {
+            response.setReplyToMessage(messageMapper.toShortResponse(message.getReplyToMessage()));
+        }
+
+        if (currentUserId.equals(message.getAuthor().getId())) {
+            response.setStatus(message.getStatus());
+        } else {
+            response.setStatus(message.getReadAt() != null ?
+                    ChatMessage.MessageStatus.READ : ChatMessage.MessageStatus.SENT);
+        }
+
+        return response;
+    }
+
+    private List<String> splitMessageByLength(String content, int maxLength) {
+        List<String> parts = new ArrayList<>();
+
+        if (content == null || content.isEmpty()) {
+            return parts;
+        }
+
+        if (content.length() <= maxLength) {
+            parts.add(content);
+            return parts;
+        }
+
+        for (int i = 0; i < content.length(); i += maxLength) {
+            int end = Math.min(content.length(), i + maxLength);
+            parts.add(content.substring(i, end));
+        }
+
+        return parts;
+    }
+}

@@ -13,6 +13,6 @@ public class MessageResponse {
     private String content;
     private UserShortProfileResponse author;
     private ChatMessage.MessageStatus status;
-    private MessageShortResponse reply_to_message;
+    private MessageShortResponse replyToMessage;
     private LocalDateTime createdAt;
 }

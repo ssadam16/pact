@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/auth/**", "/oauth2/**")
+                        .ignoringRequestMatchers("/auth/**", "/oauth2/**", "/api/**", "/ws/**")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
 

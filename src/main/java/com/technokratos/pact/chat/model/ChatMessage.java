@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,6 +38,10 @@ public class ChatMessage extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MessageStatus status;
+
+    private LocalDateTime readAt;
+
+    private Boolean isEdited;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reply_to_message_id")
@@ -70,6 +75,8 @@ public class ChatMessage extends BaseEntity {
     public enum MessageStatus {
         SENT,
         READ,
-        DELETED
+        DELETED,
+        EDITED,
+        FAILED
     }
 }

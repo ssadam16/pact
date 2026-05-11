@@ -45,6 +45,7 @@ public class MinioService {
     public static class Folders {
         public static final String AVATARS = "avatars";
         public static final String ARTICLES = "articles";
+        public static final String CHAT_MEDIA = "chat-media";
     }
 
     @PostConstruct
