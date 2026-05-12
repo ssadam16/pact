@@ -24,7 +24,6 @@ public class ChatRestController {
     @PostMapping
     public ResponseEntity<ChatResponse> createChat(@Valid @RequestBody ChatCreateRequest request,
                                                    @AuthenticationPrincipal UserDetailsImpl currentUser) {
-
         ChatResponse response = chatService.createChat(request, currentUser.getId());
         return ResponseEntity.ok(response);
     }
@@ -32,7 +31,6 @@ public class ChatRestController {
     @GetMapping
     public ResponseEntity<Page<ChatResponse>> getUserChats(@RequestParam(defaultValue = "0") int page,
                                                            @AuthenticationPrincipal UserDetailsImpl currentUser) {
-
         Page<ChatResponse> chats = chatService.getUserChats(currentUser.getId(), page);
         return ResponseEntity.ok(chats);
     }
@@ -41,10 +39,15 @@ public class ChatRestController {
     public ResponseEntity<Page<MessageResponse>> getChatMessages(@PathVariable UUID chatId,
                                                                  @RequestParam(defaultValue = "0") int page,
                                                                  @AuthenticationPrincipal UserDetailsImpl currentUser) {
-
         Page<MessageResponse> messages = chatService.getChatMessages(chatId, currentUser.getId(), page);
+
+        // Mark all unread incoming messages as read when user opens the chat.
+        // Handles offline scenario: sender gets READ notification via WebSocket
+        // even if recipient was not connected when messages were sent.
+        if (page == 0) {
+            chatService.markAllMessagesAsRead(chatId, currentUser.getId());
+        }
+
         return ResponseEntity.ok(messages);
     }
-
-
 }

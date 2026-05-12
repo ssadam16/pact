@@ -1,291 +1,45 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мои чаты</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            height: 100vh;
-            display: flex;
-        }
-        .sidebar {
-            width: 350px;
-            background: white;
-            border-right: 1px solid #e0e0e0;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
-            background: #fff;
-        }
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        .new-chat-btn {
-            width: 100%;
-            padding: 10px;
-            background: #0088cc;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .chats-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-        .chat-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .chat-item:hover {
-            background: #f8f8f8;
-        }
-        .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #0088cc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .chat-info {
-            flex: 1;
-            min-width: 0;
-        }
-        .chat-name {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        .last-message {
-            font-size: 13px;
-            color: #666;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .chat-meta {
-            text-align: right;
-            flex-shrink: 0;
-        }
-        .time {
-            font-size: 11px;
-            color: #999;
-            margin-bottom: 4px;
-        }
-        .unread-badge {
-            background: #0088cc;
-            color: white;
-            border-radius: 50%;
-            min-width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            padding: 0 5px;
-        }
-        .content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #e8f4f8;
-        }
-        .welcome {
-            text-align: center;
-            color: #666;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #999;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Чаты — Pact</title>
+  <link rel="stylesheet" href="/css/main.css">
+<!--  <link rel="stylesheet" href="/css/chat.css">-->
 </head>
 <body>
-<div class="sidebar">
-    <div class="header">
-        <h1>Чаты</h1>
-        <button class="new-chat-btn" onclick="location.href='/chat/new'">+ Новый чат</button>
+<div class="chat-layout">
+
+  <!-- Sidebar -->
+  <aside class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <h2>Чаты</h2>
     </div>
+    <a href="/chat/new" class="new-chat-btn-sidebar">+ Новый чат</a>
     <div class="chats-list" id="chatsList">
-        <div class="loading">Загрузка...</div>
+      <div class="chat-spinner">
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+      </div>
     </div>
-</div>
-<div class="content">
-    <div class="welcome">
-        <h2>Добро пожаловать!</h2>
-        <p>Выберите чат или начните новый</p>
-    </div>
+  </aside>
+
+  <!-- Welcome area -->
+  <div class="chats-welcome">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <h2>Добро пожаловать!</h2>
+    <p>Выберите чат слева или начните новый разговор</p>
+    <a href="/chat/new" class="btn-solid-pact" style="margin-top:8px; font-size:14px;">
+      Начать чат
+    </a>
+  </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-
-<script>
-    let currentPage = 0;
-    let isLoading = false;
-    let hasMore = true;
-    let stompClient = null;
-    let currentUsername = '[[${username}]]';
-
-    function connectWebSocket() {
-        const socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-
-        stompClient.connect({}, function(frame) {
-            console.log('WebSocket connected for chat list');
-
-            // Подписка на обновления чатов
-            stompClient.subscribe('/user/queue/chats_update', function(message) {
-                const updatedChat = JSON.parse(message.body);
-                updateChatInList(updatedChat);
-            });
-        });
-    }
-
-    function updateChatInList(chat) {
-        const existingItem = $(`.chat-item[data-chat-id="${chat.id}"]`);
-        const newHtml = createChatItemHtml(chat);
-
-        if (existingItem.length) {
-            existingItem.replaceWith(newHtml);
-        } else {
-            $('#chatsList').prepend(newHtml);
-        }
-
-        // Пересортировать чаты по времени последнего сообщения
-        sortChatsByLastMessage();
-    }
-
-    function sortChatsByLastMessage() {
-        const items = $('.chat-item').get();
-        items.sort(function(a, b) {
-            const timeA = $(a).find('.time').text();
-            const timeB = $(b).find('.time').text();
-            return timeB.localeCompare(timeA);
-        });
-        $.each(items, function(idx, itm) {
-            $('#chatsList').append(itm);
-        });
-    }
-
-    function createChatItemHtml(chat) {
-        const avatarHtml = chat.interlocutor?.avatarUrl
-            ? `<img src="${chat.interlocutor.avatarUrl}" alt="avatar">`
-            : `<span>${chat.interlocutor?.name?.charAt(0) || chat.interlocutor?.username?.charAt(0) || '?'}</span>`;
-
-        const unreadHtml = chat.unreadCount > 0
-            ? `<div class="unread-badge">${chat.unreadCount}</div>`
-            : '';
-
-        const lastMessageText = chat.lastMessage?.content || 'Нет сообщений';
-        const time = chat.lastMessage?.createdAt
-            ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-            : '';
-
-        return `
-      <div class="chat-item" data-chat-id="${chat.id}" onclick="location.href='/chat/${chat.id}'">
-        <div class="avatar">${avatarHtml}</div>
-        <div class="chat-info">
-          <div class="chat-name">${escapeHtml(chat.interlocutor?.name || chat.interlocutor?.username || 'Пользователь')}</div>
-          <div class="last-message">${escapeHtml(lastMessageText)}</div>
-        </div>
-        <div class="chat-meta">
-          <div class="time">${time}</div>
-          ${unreadHtml}
-        </div>
-      </div>
-    `;
-    }
-
-    function loadChats(page = 0) {
-        if (isLoading) return;
-        isLoading = true;
-
-        $.ajax({
-            url: '/api/chats',
-            method: 'GET',
-            data: { page: page },
-            xhrFields: { withCredentials: true },
-            success: function(response) {
-                if (page === 0) {
-                    $('#chatsList').empty();
-                }
-
-                if (response.content && response.content.length > 0) {
-                    response.content.forEach(chat => {
-                        $('#chatsList').append(createChatItemHtml(chat));
-                    });
-                    hasMore = !response.last;
-                } else if (page === 0) {
-                    $('#chatsList').html('<div class="loading">Нет чатов</div>');
-                }
-
-                isLoading = false;
-            },
-            error: function(xhr) {
-                console.error('Error loading chats:', xhr);
-                if (page === 0) {
-                    $('#chatsList').html('<div class="loading">Ошибка загрузки</div>');
-                }
-                isLoading = false;
-            }
-        });
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    $(window).on('scroll', function() {
-        if ($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
-            if (hasMore && !isLoading) {
-                currentPage++;
-                loadChats(currentPage);
-            }
-        }
-    });
-
-    $(document).ready(function() {
-        loadChats(0);
-        connectWebSocket();
-    });
-</script>
+<script src="/js/chats.js"></script>
 </body>
 </html>

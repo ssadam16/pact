@@ -26,7 +26,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -70,18 +69,14 @@ public class ChatService {
                 .build();
 
         chat = chatRepository.save(chat);
-
         log.info("Chat created with id: {}", chat.getId());
-
         return getChatResponse(chat, currentUserId);
     }
 
     public Page<ChatResponse> getUserChats(UUID userId, int page) {
         log.info("Getting chats for user: {}, page: {}", userId, page);
-
         Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("updatedAt").descending());
         Page<Chat> chats = chatRepository.findAllByUserId(userId, pageable);
-
         return chats.map(chat -> getChatResponse(chat, userId));
     }
 
@@ -113,17 +108,12 @@ public class ChatService {
         User recipient = getChatRecipient(chat, currentUserId);
 
         String content = request.getContent() != null ? request.getContent() : "";
-
         List<String> contentParts = splitMessageByLength(content, MAX_MESSAGE_LENGTH);
-
         List<MessageResponse> sentMessages = new ArrayList<>();
 
         for (int i = 0; i < contentParts.size(); i++) {
-            String partContent = contentParts.get(i);
-            boolean isLastPart = (i == contentParts.size() - 1);
-
             ChatMessage message = ChatMessage.builder()
-                    .content(partContent)
+                    .content(contentParts.get(i))
                     .author(author)
                     .chat(chat)
                     .status(ChatMessage.MessageStatus.SENT)
@@ -133,36 +123,19 @@ public class ChatService {
                     .build();
 
             message = messageRepository.save(message);
-
             chatRepository.updateLastActivity(chatId);
-
-            // Если есть медиа и это последняя часть сообщения
-            if (request.getMediaList() != null && !request.getMediaList().isEmpty() && isLastPart) {
-                // Здесь нужно было бы обработать медиа, но для загрузки медиа нужен отдельный endpoint
-                // Поэтому медиа загружаются отдельно, а здесь только привязываем
-            }
 
             MessageResponse response = toMessageResponse(message, currentUserId);
             sentMessages.add(response);
 
-            messagingTemplate.convertAndSendToUser(
-                    recipient.getUsername(),
-                    "/queue/messages",
-                    response
-            );
-
-            messagingTemplate.convertAndSendToUser(
-                    author.getUsername(),
-                    "/queue/messages",
-                    response
-            );
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/messages", response);
+            messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/messages", response);
         }
 
-        ChatResponse updatedChatForAuthor = getChatResponse(chat, author.getId());
-        ChatResponse updatedChatForRecipient = getChatResponse(chat, recipient.getId());
-
-        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update", updatedChatForAuthor);
-        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update", updatedChatForRecipient);
+        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update",
+                getChatResponse(chat, author.getId()));
+        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update",
+                getChatResponse(chat, recipient.getId()));
 
         return sentMessages;
     }
@@ -177,7 +150,7 @@ public class ChatService {
             throw new AccessDeniedException("You can only delete your own messages");
         }
 
-        message.setContent("Сообщение удалено");  // Сразу меняем текст
+        message.setContent("Сообщение удалено");
         message.setStatus(ChatMessage.MessageStatus.DELETED);
         message.setIsEdited(true);
         messageRepository.save(message);
@@ -189,7 +162,6 @@ public class ChatService {
         if (newContent == null || newContent.isBlank()) {
             throw new IllegalArgumentException("Message content cannot be empty");
         }
-
         if (newContent.length() > MAX_MESSAGE_LENGTH) {
             throw new IllegalArgumentException("Message too long");
         }
@@ -209,49 +181,71 @@ public class ChatService {
         return toMessageResponse(message, currentUserId);
     }
 
+    /**
+     * Called from WebSocket — messageId may be provided for the READ payload.
+     */
     public void markMessagesAsRead(UUID chatId, UUID messageId, UUID currentUserId) {
         log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);
 
         int updated = messageRepository.markMessagesAsRead(chatId, currentUserId);
         log.info("Marked {} messages as read", updated);
+        if (updated == 0) return;
 
-        // После отметки о прочтении, нужно уведомить отправителя
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+        User author = getChatRecipient(chat, currentUserId);
 
-        User author = getChatRecipient(chat, currentUserId); // получаем собеседника (того, кто писал)
+        Map<String, Object> readPayload = new HashMap<>();
+        readPayload.put("chatId", chatId);
+        readPayload.put("readBy", currentUserId);
+        if (messageId != null) {
+            readPayload.put("readUpToMessageId", messageId);
+        }
 
-        // Отправляем уведомление автору сообщений, что их прочитали
-        messagingTemplate.convertAndSendToUser(
-                author.getUsername(),
-                "/queue/read",
-                Map.of("chatId", chatId, "readBy", currentUserId, "readUpToMessageId", messageId)
-        );
+        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/read", readPayload);
     }
 
-    public ChatMessage markMessagesAsReadAndReturnLast(UUID chatId, UUID messageId, UUID currentUserId) {
-        log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);
-
-        ChatMessage lastUnread = messageRepository.findLastUnreadMessage(chatId, currentUserId)
-                .orElse(null);
+    /**
+     * Called from REST controller when user opens the chat — no messageId needed.
+     */
+    public void markAllMessagesAsRead(UUID chatId, UUID currentUserId) {
+        log.info("Marking all messages as read in chat: {} by user: {}", chatId, currentUserId);
 
         int updated = messageRepository.markMessagesAsRead(chatId, currentUserId);
         log.info("Marked {} messages as read", updated);
+        if (updated == 0) return;
 
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+        User author = getChatRecipient(chat, currentUserId);
+
+        Map<String, Object> readPayload = new HashMap<>();
+        readPayload.put("chatId", chatId);
+        readPayload.put("readBy", currentUserId);
+
+        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/read", readPayload);
+    }
+
+    public ChatMessage markMessagesAsReadAndReturnLast(UUID chatId, UUID messageId, UUID currentUserId) {
+        ChatMessage lastUnread = messageRepository.findLastUnreadMessage(chatId, currentUserId).orElse(null);
+        messageRepository.markMessagesAsRead(chatId, currentUserId);
         return lastUnread;
     }
 
     public void sendTypingStatus(UUID chatId, Boolean isTyping, UUID currentUserId) {
+        if (chatId == null) return;
+
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> ChatNotFoundException.byId(chatId));
 
         User recipient = getChatRecipient(chat, currentUserId);
 
-        messagingTemplate.convertAndSendToUser(
-                recipient.getUsername(),
-                "/queue/typing",
-                Map.of("chatId", chatId, "userId", currentUserId, "isTyping", isTyping)
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("chatId", chatId);
+        payload.put("userId", currentUserId);
+        payload.put("isTyping", isTyping);
+
+        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/typing", payload);
     }
 
     private ChatResponse getChatResponse(Chat chat, UUID currentUserId) {
@@ -298,16 +292,11 @@ public class ChatService {
             response.setReplyToMessage(messageMapper.toShortResponse(message.getReplyToMessage()));
         }
 
-        // Правильное определение статуса для отправителя
         if (currentUserId.equals(message.getAuthor().getId())) {
-            // Для отправителя: проверяем readAt в БД
-            if (message.getReadAt() != null) {
-                response.setStatus(ChatMessage.MessageStatus.READ);
-            } else {
-                response.setStatus(ChatMessage.MessageStatus.SENT);
-            }
+            response.setStatus(message.getReadAt() != null
+                    ? ChatMessage.MessageStatus.READ
+                    : ChatMessage.MessageStatus.SENT);
         } else {
-            // Для получателя
             response.setStatus(message.getStatus());
         }
 
@@ -316,21 +305,14 @@ public class ChatService {
 
     private List<String> splitMessageByLength(String content, int maxLength) {
         List<String> parts = new ArrayList<>();
-
-        if (content == null || content.isEmpty()) {
-            return parts;
-        }
-
+        if (content == null || content.isEmpty()) return parts;
         if (content.length() <= maxLength) {
             parts.add(content);
             return parts;
         }
-
         for (int i = 0; i < content.length(); i += maxLength) {
-            int end = Math.min(content.length(), i + maxLength);
-            parts.add(content.substring(i, end));
+            parts.add(content.substring(i, Math.min(content.length(), i + maxLength)));
         }
-
         return parts;
     }
 }

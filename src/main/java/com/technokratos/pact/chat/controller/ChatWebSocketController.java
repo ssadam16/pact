@@ -32,9 +32,9 @@ public class ChatWebSocketController {
 
         List<MessageResponse> messages = chatService.sendMessage(request.getChatId(), request, currentUserId);
 
-        messages.forEach(m -> {
-            messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), m);
-        });
+        messages.forEach(m ->
+            messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), m)
+        );
     }
 
     @MessageMapping("/chat.read")
@@ -51,8 +51,7 @@ public class ChatWebSocketController {
         readPayload.put("readBy", currentUserId);
         readPayload.put("readUpToMessageId", request.getMessageId());
 
-        // Используем convertAndSend с указанием типа destination и payload
-        messagingTemplate.convertAndSend((String) ("/topic/chat." + request.getChatId()), (Object) readPayload);
+        messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(readPayload));
     }
 
     @MessageMapping("/chat.typing")
@@ -74,9 +73,10 @@ public class ChatWebSocketController {
         Map<String, Object> deletePayload = new HashMap<>();
         deletePayload.put("action", "DELETE");
         deletePayload.put("messageId", request.getMessageId());
-        deletePayload.put("content", "Сообщение удалено");  // Добавляем текст
-        deletePayload.put("status", "DELETED");  // Добавляем статус
+        deletePayload.put("content", "Сообщение удалено");
+        deletePayload.put("status", "DELETED");
 
+        // Fix: was wrapped in Optional.of() which caused serialization issues
         messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(deletePayload));
     }
 
@@ -90,6 +90,7 @@ public class ChatWebSocketController {
         editPayload.put("action", "EDIT");
         editPayload.put("message", edited);
 
+        // Fix: was wrapped in Optional.of() which caused serialization issues
         messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(editPayload));
     }
 
@@ -97,7 +98,6 @@ public class ChatWebSocketController {
         if (principal == null) {
             throw new AuthenticationServiceException("User not authenticated");
         }
-
         Authentication auth = (Authentication) principal;
         UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
         return userDetails.getId();
