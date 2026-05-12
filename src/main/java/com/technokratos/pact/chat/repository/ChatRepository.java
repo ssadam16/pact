@@ -4,6 +4,7 @@ import com.technokratos.pact.chat.model.Chat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,4 +20,8 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
 
     @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.chat.id = :chatId AND m.author.id != :userId AND m.readAt IS NULL")
     long countUnreadMessages(@Param("chatId") UUID chatId, @Param("userId") UUID userId);
+
+    @Modifying
+    @Query("UPDATE Chat c SET c.updatedAt = CURRENT_TIMESTAMP WHERE c.id = :chatId")
+    void updateLastActivity(@Param("chatId") UUID chatId);
 }

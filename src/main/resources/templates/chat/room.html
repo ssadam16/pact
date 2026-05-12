@@ -32,9 +32,6 @@
       cursor: pointer;
       color: #0088cc;
     }
-    .chats-header h2:hover {
-      text-decoration: underline;
-    }
     .chats-list {
       flex: 1;
       overflow-y: auto;
@@ -224,26 +221,23 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script>
-  const chatId = '[[${chatId}]]';  // <- ДОБАВЬ КАВЫЧКИ
+  const chatId = '[[${chatId}]]';
   let stompClient = null;
   let currentPage = 0;
   let isLoading = false;
   let hasMore = true;
   let typingTimeout = null;
-  let currentUsername = '[[${username}]]';  // <- И СЮДА КАВЫЧКИ
+  let currentUsername = '[[${username}]]';
 
-  // Функция отправки сообщения
   window.sendMessage = function() {
     const input = $('#messageInput');
     const content = input.val().trim();
 
     if (!content) {
-      console.log('Message is empty');
       return;
     }
 
     if (!stompClient || !stompClient.connected) {
-      console.error('WebSocket not connected');
       alert('Нет соединения с сервером');
       return;
     }
@@ -255,49 +249,124 @@
       mediaList: null
     };
 
-    console.log('Sending message:', request);
     stompClient.send('/app/chat.send', {}, JSON.stringify(request));
     input.val('');
   };
 
-  // WebSocket подключение
   function connectWebSocket() {
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function(frame) {
-      console.log('Connected to WebSocket: ' + frame);
+      console.log('Connected to WebSocket');
 
-      // Подписка на сообщения в этом чате
       stompClient.subscribe(`/topic/chat.${chatId}`, function(message) {
-        const msg = JSON.parse(message.body);
-        console.log('Received message:', msg);
-        const isOutgoing = msg.author?.username === currentUsername;
-        appendMessage(msg, isOutgoing);
+        const data = JSON.parse(message.body);
+
+        if (data.action) {
+          if (data.action === 'DELETE') {
+            // Обновляем сообщение, а не удаляем полностью
+            const msgElement = $(`.message[data-message-id="${data.messageId}"]`);
+            if (msgElement.length) {
+              const isOutgoing = msgElement.hasClass('outgoing');
+              // Создаем новое сообщение с текстом "Сообщение удалено"
+              const deletedMsg = {
+                id: data.messageId,
+                content: data.content || 'Сообщение удалено',
+                status: 'DELETED',
+                createdAt: msgElement.find('.message-meta').text().split(' ')[0],
+                isEdited: false
+              };
+              msgElement.replaceWith(createMessageHtml(deletedMsg, isOutgoing));
+            }
+          } else if (data.action === 'EDIT') {
+            const msgElement = $(`.message[data-message-id="${data.message.id}"]`);
+            if (msgElement.length) {
+              const isOutgoing = data.message.author?.username === currentUsername;
+              msgElement.replaceWith(createMessageHtml(data.message, isOutgoing));
+            }
+          } else if (data.action === 'READ') {
+            // Обновляем статус прочитанных сообщений
+            $('.message.outgoing').each(function() {
+              const meta = $(this).find('.message-meta');
+              const currentText = meta.text();
+              if (currentText.includes('✓') && !currentText.includes('✓✓')) {
+                meta.html(meta.html().replace('✓', '✓✓'));
+              }
+            });
+          }
+        } else {
+          const isOutgoing = data.author?.username === currentUsername;
+          appendMessage(data, isOutgoing);
+          updateChatsList();
+        }
       });
 
-      // Подписка на статус печатания
       stompClient.subscribe('/user/queue/typing', function(message) {
         const data = JSON.parse(message.body);
-        console.log('Typing event:', data);
         if (data.chatId === chatId && data.isTyping) {
-          showTypingIndicator();
+          $('#typingIndicator').show();
         } else {
-          hideTypingIndicator();
+          $('#typingIndicator').hide();
         }
       });
 
-      // Подписка на прочтения
+      stompClient.subscribe('/user/queue/chats_update', function(message) {
+        const updatedChat = JSON.parse(message.body);
+        updateChatInList(updatedChat);
+      });
+
       stompClient.subscribe('/user/queue/read', function(message) {
         const data = JSON.parse(message.body);
-        console.log('Read receipt:', data);
         if (data.chatId === chatId) {
-          markMessagesAsReadLocal(data.readUpToMessageId);
+          // Обновляем статус отправленных сообщений на прочитанные
+          $('.message.outgoing').each(function() {
+            const meta = $(this).find('.message-meta');
+            if (meta.text().includes('✓') && !meta.text().includes('✓✓')) {
+              meta.html(meta.html().replace('✓', '✓✓'));
+            }
+          });
         }
       });
+
+      setTimeout(function() {
+        markAllMessagesAsRead();
+      }, 1000);
     }, function(error) {
       console.error('WebSocket connection error:', error);
       setTimeout(connectWebSocket, 5000);
+    });
+  }
+
+  function markAllMessagesAsRead() {
+    if (!stompClient || !stompClient.connected) return;
+
+    const lastIncomingMessage = $('.message.incoming').last();
+    if (lastIncomingMessage.length) {
+      const messageId = lastIncomingMessage.data('message-id');
+      if (messageId) {
+        stompClient.send('/app/chat.read', {}, JSON.stringify({
+          chatId: chatId,
+          messageId: messageId
+        }));
+      }
+    }
+  }
+
+  function updateChatsList() {
+    $.ajax({
+      url: '/api/chats',
+      method: 'GET',
+      data: { page: 0, size: 100 },
+      xhrFields: { withCredentials: true },
+      success: function(response) {
+        if (response.content && response.content.length > 0) {
+          $('#chatsList').empty();
+          response.content.forEach(chat => {
+            $('#chatsList').append(createChatItemHtml(chat));
+          });
+        }
+      }
     });
   }
 
@@ -310,15 +379,6 @@
     }
   }
 
-  function showTypingIndicator() {
-    $('#typingIndicator').show();
-  }
-
-  function hideTypingIndicator() {
-    $('#typingIndicator').hide();
-  }
-
-  // Загрузка сообщений
   function loadMessages(page = 0) {
     if (isLoading) return;
     isLoading = true;
@@ -327,24 +387,32 @@
       url: `/api/chats/${chatId}/messages`,
       method: 'GET',
       data: { page: page },
-      xhrFields: {
-        withCredentials: true
-      },
+      xhrFields: { withCredentials: true },
       success: function(response) {
-        if (page === 0) {
-          $('#messagesArea').empty();
-        }
-
         if (response.content && response.content.length > 0) {
-          response.content.reverse().forEach(msg => {
+          // Сохраняем старые сообщения для восстановления скролла
+          const oldScrollHeight = $('#messagesArea')[0].scrollHeight;
+          const oldScrollTop = $('#messagesArea').scrollTop();
+
+          response.content.forEach(msg => {
             const isOutgoing = msg.author?.username === currentUsername;
             prependMessage(msg, isOutgoing);
           });
           hasMore = !response.last;
+
+          if (page === 0) {
+            scrollToBottom();
+            setTimeout(function() {
+              markAllMessagesAsRead();
+            }, 500);
+          } else {
+            // Восстанавливаем позицию скролла при загрузке старых сообщений
+            const newScrollHeight = $('#messagesArea')[0].scrollHeight;
+            $('#messagesArea').scrollTop(oldScrollTop + (newScrollHeight - oldScrollHeight));
+          }
         } else if (page === 0) {
           $('#messagesArea').html('<div class="loading">Нет сообщений</div>');
         }
-
         isLoading = false;
       },
       error: function(xhr) {
@@ -354,12 +422,22 @@
     });
   }
 
+  $('#messagesArea').on('scroll', function() {
+    if ($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 100) {
+      markAllMessagesAsRead();
+    }
+
+    if ($(this).scrollTop() < 50 && hasMore && !isLoading) {
+      currentPage++;
+      loadMessages(currentPage);
+    }
+  });
+
   function appendMessage(msg, isOutgoing) {
     const messageHtml = createMessageHtml(msg, isOutgoing);
     $('#messagesArea').append(messageHtml);
     scrollToBottom();
 
-    // Отмечаем как прочитанное при просмотре
     if (!isOutgoing && stompClient && stompClient.connected) {
       stompClient.send('/app/chat.read', {}, JSON.stringify({
         chatId: chatId,
@@ -374,26 +452,43 @@
   }
 
   function createMessageHtml(msg, isOutgoing) {
-    const time = new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    const status = isOutgoing ? (msg.status === 'READ' ? '✓✓' : '✓') : '';
+    const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+    let status = '';
+    if (isOutgoing) {
+      // Используем status из ответа, а не readAt
+      if (msg.status === 'READ') {
+        status = '✓✓';
+      } else {
+        status = '✓';
+      }
+    }
     const content = msg.content || '';
+    const isDeleted = msg.status === 'DELETED';
+    const isEdited = msg.isEdited;
+
+    const actionButtons = isOutgoing && !isDeleted ? `
+      <span style="margin-left: 8px;">
+        <button onclick="editMessage('${msg.id}', '${escapeHtml(content).replace(/'/g, "\\'")}')" style="background:none;border:none;cursor:pointer;font-size:11px;">✎</button>
+        <button onclick="deleteMessage('${msg.id}')" style="background:none;border:none;cursor:pointer;font-size:11px;">🗑</button>
+      </span>
+    ` : '';
+
+    const editMark = isEdited && !isDeleted ? ' (ред.)' : '';
 
     return `
-                <div class="message ${isOutgoing ? 'outgoing' : 'incoming'}">
-                    <div class="message-bubble">${escapeHtml(content)}</div>
-                    <div class="message-meta">
-                        ${time} ${status}
-                        ${msg.replyToMessage ? `<span style="margin-left: 8px;">↳ Ответ на: ${escapeHtml(msg.replyToMessage.content?.substring(0, 30))}</span>` : ''}
-                    </div>
-                </div>
-            `;
+      <div class="message ${isOutgoing ? 'outgoing' : 'incoming'}" data-message-id="${msg.id}">
+        <div class="message-bubble">${escapeHtml(content)}</div>
+        <div class="message-meta">
+          ${time} ${status}${editMark}${actionButtons}
+        </div>
+      </div>
+    `;
   }
 
   function markMessagesAsReadLocal(messageId) {
-    // Подсветить прочитанные сообщения
     $('.message.outgoing').each(function() {
       const meta = $(this).find('.message-meta');
-      if (!meta.text().includes('✓✓')) {
+      if (meta.text().includes('✓') && !meta.text().includes('✓✓')) {
         meta.html(meta.html().replace('✓', '✓✓'));
       }
     });
@@ -409,33 +504,12 @@
       url: '/api/chats',
       method: 'GET',
       data: { page: 0, size: 100 },
-      xhrFields: {
-        withCredentials: true
-      },
+      xhrFields: { withCredentials: true },
       success: function(response) {
         $('#chatsList').empty();
         if (response.content && response.content.length > 0) {
           response.content.forEach(chat => {
-            const isActive = chat.id === chatId;
-            const avatarHtml = chat.interlocutor?.avatarUrl
-                    ? `<img src="${chat.interlocutor.avatarUrl}">`
-                    : `<span>${chat.interlocutor?.name?.charAt(0) || chat.interlocutor?.username?.charAt(0) || '?'}</span>`;
-
-            const unreadHtml = chat.unreadCount > 0
-                    ? `<div class="unread-badge">${chat.unreadCount}</div>`
-                    : '';
-
-            const chatHtml = `
-                                <div class="chat-item ${isActive ? 'active' : ''}" onclick="location.href='/chat/${chat.id}'">
-                                    <div class="avatar">${avatarHtml}</div>
-                                    <div class="chat-info">
-                                        <div class="chat-name">${escapeHtml(chat.interlocutor?.name || chat.interlocutor?.username || 'Пользователь')}</div>
-                                        <div class="last-message">${escapeHtml(chat.lastMessage?.content || 'Нет сообщений')}</div>
-                                    </div>
-                                    ${unreadHtml}
-                                </div>
-                            `;
-            $('#chatsList').append(chatHtml);
+            $('#chatsList').append(createChatItemHtml(chat));
           });
         } else {
           $('#chatsList').html('<div class="loading">Нет чатов</div>');
@@ -452,9 +526,7 @@
       url: '/api/chats',
       method: 'GET',
       data: { page: 0, size: 100 },
-      xhrFields: {
-        withCredentials: true
-      },
+      xhrFields: { withCredentials: true },
       success: function(response) {
         const chat = response.content?.find(c => c.id === chatId);
         if (chat && chat.interlocutor) {
@@ -482,7 +554,68 @@
     });
   }
 
-  // События ввода
+  function createChatItemHtml(chat) {
+    const isActive = chat.id === chatId;
+    const avatarHtml = chat.interlocutor?.avatarUrl
+            ? `<img src="${chat.interlocutor.avatarUrl}" alt="avatar">`
+            : `<span>${chat.interlocutor?.name?.charAt(0) || chat.interlocutor?.username?.charAt(0) || '?'}</span>`;
+
+    const unreadHtml = chat.unreadCount > 0
+            ? `<div class="unread-badge">${chat.unreadCount}</div>`
+            : '';
+
+    const lastMessageText = chat.lastMessage?.content || 'Нет сообщений';
+    const time = chat.lastMessage?.createdAt
+            ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+            : '';
+
+    return `
+      <div class="chat-item ${isActive ? 'active' : ''}" data-chat-id="${chat.id}" onclick="location.href='/chat/${chat.id}'">
+        <div class="avatar">${avatarHtml}</div>
+        <div class="chat-info">
+          <div class="chat-name">${escapeHtml(chat.interlocutor?.name || chat.interlocutor?.username || 'Пользователь')}</div>
+          <div class="last-message">${escapeHtml(lastMessageText)}</div>
+        </div>
+        <div class="chat-meta">
+          <div class="time">${time}</div>
+          ${unreadHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function updateChatInList(chat) {
+    const existingItem = $(`.chat-item[data-chat-id="${chat.id}"]`);
+    if (existingItem.length) {
+      existingItem.replaceWith(createChatItemHtml(chat));
+    } else {
+      $('#chatsList').prepend(createChatItemHtml(chat));
+    }
+  }
+
+  window.deleteMessage = function(messageId) {
+    if (!confirm('Удалить сообщение?')) return;
+    if (stompClient && stompClient.connected) {
+      stompClient.send('/app/chat.delete', {}, JSON.stringify({
+        chatId: chatId,
+        messageId: messageId
+      }));
+    }
+  };
+
+  window.editMessage = function(messageId, oldContent) {
+    const newContent = prompt('Редактировать сообщение:', oldContent);
+    if (newContent && newContent.trim() && newContent !== oldContent) {
+      if (stompClient && stompClient.connected) {
+        stompClient.send('/app/chat.edit', {}, JSON.stringify({
+          chatId: chatId,
+          messageId: messageId,
+          content: newContent
+        }));
+      }
+    }
+  };
+
   $('#messageInput').on('input', function() {
     clearTimeout(typingTimeout);
     sendTyping(true);
@@ -495,9 +628,7 @@
     }
   });
 
-  // Инициализация
   $(document).ready(function() {
-    console.log('Page loaded, chatId:', chatId, 'currentUser:', currentUsername);
     loadChats();
     loadChatInfo();
     loadMessages(0);

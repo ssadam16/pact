@@ -2,6 +2,7 @@ package com.technokratos.pact.chat.service;
 
 import com.technokratos.pact.chat.dto.*;
 import com.technokratos.pact.chat.exception.ChatNotFoundException;
+import com.technokratos.pact.chat.exception.MessageNotFoundException;
 import com.technokratos.pact.chat.mapper.ChatMapper;
 import com.technokratos.pact.chat.mapper.ChatMessageMapper;
 import com.technokratos.pact.chat.model.Chat;
@@ -25,6 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -77,7 +79,7 @@ public class ChatService {
     public Page<ChatResponse> getUserChats(UUID userId, int page) {
         log.info("Getting chats for user: {}, page: {}", userId, page);
 
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("updatedAt").descending());
         Page<Chat> chats = chatRepository.findAllByUserId(userId, pageable);
 
         return chats.map(chat -> getChatResponse(chat, userId));
@@ -94,7 +96,7 @@ public class ChatService {
         }
 
         Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
-        Page<ChatMessage> messages = messageRepository.findByChatIdOrderByCreatedAtAsc(chatId, pageable);
+        Page<ChatMessage> messages = messageRepository.findByChatIdOrderByCreatedAtDesc(chatId, pageable);
 
         return messages.map(message -> toMessageResponse(message, userId));
     }
@@ -132,6 +134,8 @@ public class ChatService {
 
             message = messageRepository.save(message);
 
+            chatRepository.updateLastActivity(chatId);
+
             // Если есть медиа и это последняя часть сообщения
             if (request.getMediaList() != null && !request.getMediaList().isEmpty() && isLastPart) {
                 // Здесь нужно было бы обработать медиа, но для загрузки медиа нужен отдельный endpoint
@@ -154,7 +158,55 @@ public class ChatService {
             );
         }
 
+        ChatResponse updatedChatForAuthor = getChatResponse(chat, author.getId());
+        ChatResponse updatedChatForRecipient = getChatResponse(chat, recipient.getId());
+
+        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update", updatedChatForAuthor);
+        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update", updatedChatForRecipient);
+
         return sentMessages;
+    }
+
+    public void deleteMessage(UUID messageId, UUID currentUserId) {
+        log.info("Deleting message: {} by user: {}", messageId, currentUserId);
+
+        ChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> MessageNotFoundException.byId(messageId));
+
+        if (!message.getAuthor().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("You can only delete your own messages");
+        }
+
+        message.setContent("Сообщение удалено");  // Сразу меняем текст
+        message.setStatus(ChatMessage.MessageStatus.DELETED);
+        message.setIsEdited(true);
+        messageRepository.save(message);
+    }
+
+    public MessageResponse editMessage(UUID messageId, String newContent, UUID currentUserId) {
+        log.info("Editing message: {} by user: {}", messageId, currentUserId);
+
+        if (newContent == null || newContent.isBlank()) {
+            throw new IllegalArgumentException("Message content cannot be empty");
+        }
+
+        if (newContent.length() > MAX_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("Message too long");
+        }
+
+        ChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getAuthor().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("You can only edit your own messages");
+        }
+
+        message.setContent(newContent);
+        message.setStatus(ChatMessage.MessageStatus.EDITED);
+        message.setIsEdited(true);
+        message = messageRepository.save(message);
+
+        return toMessageResponse(message, currentUserId);
     }
 
     public void markMessagesAsRead(UUID chatId, UUID messageId, UUID currentUserId) {
@@ -163,16 +215,30 @@ public class ChatService {
         int updated = messageRepository.markMessagesAsRead(chatId, currentUserId);
         log.info("Marked {} messages as read", updated);
 
+        // После отметки о прочтении, нужно уведомить отправителя
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> ChatNotFoundException.byId(chatId));
 
-        User recipient = getChatRecipient(chat, currentUserId);
+        User author = getChatRecipient(chat, currentUserId); // получаем собеседника (того, кто писал)
 
+        // Отправляем уведомление автору сообщений, что их прочитали
         messagingTemplate.convertAndSendToUser(
-                recipient.getUsername(),
+                author.getUsername(),
                 "/queue/read",
                 Map.of("chatId", chatId, "readBy", currentUserId, "readUpToMessageId", messageId)
         );
+    }
+
+    public ChatMessage markMessagesAsReadAndReturnLast(UUID chatId, UUID messageId, UUID currentUserId) {
+        log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);
+
+        ChatMessage lastUnread = messageRepository.findLastUnreadMessage(chatId, currentUserId)
+                .orElse(null);
+
+        int updated = messageRepository.markMessagesAsRead(chatId, currentUserId);
+        log.info("Marked {} messages as read", updated);
+
+        return lastUnread;
     }
 
     public void sendTypingStatus(UUID chatId, Boolean isTyping, UUID currentUserId) {
@@ -192,12 +258,11 @@ public class ChatService {
         User interlocutor = getChatRecipient(chat, currentUserId);
         UserShortProfileResponse interlocutorProfile = userService.getShortProfile(interlocutor.getId());
 
-        Pageable pageable = PageRequest.of(0, 1, Sort.by("createdAt").descending());
-        Page<ChatMessage> lastMessagePage = messageRepository.findByChatIdOrderByCreatedAtAsc(chat.getId(), pageable);
+        Optional<ChatMessage> lastMessageOpt = messageRepository.findFirstByChatIdOrderByCreatedAtDesc(chat.getId());
 
         MessageShortResponse lastMessage = null;
-        if (!lastMessagePage.isEmpty()) {
-            ChatMessage lastMsg = lastMessagePage.getContent().get(0);
+        if (lastMessageOpt.isPresent()) {
+            ChatMessage lastMsg = lastMessageOpt.get();
             lastMessage = messageMapper.toShortResponse(lastMsg);
             if (lastMsg.getAuthor() != null && lastMsg.getAuthor().getAvatarFilename() != null) {
                 lastMessage.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(lastMsg.getAuthor().getAvatarFilename()));
@@ -233,11 +298,17 @@ public class ChatService {
             response.setReplyToMessage(messageMapper.toShortResponse(message.getReplyToMessage()));
         }
 
+        // Правильное определение статуса для отправителя
         if (currentUserId.equals(message.getAuthor().getId())) {
-            response.setStatus(message.getStatus());
+            // Для отправителя: проверяем readAt в БД
+            if (message.getReadAt() != null) {
+                response.setStatus(ChatMessage.MessageStatus.READ);
+            } else {
+                response.setStatus(ChatMessage.MessageStatus.SENT);
+            }
         } else {
-            response.setStatus(message.getReadAt() != null ?
-                    ChatMessage.MessageStatus.READ : ChatMessage.MessageStatus.SENT);
+            // Для получателя
+            response.setStatus(message.getStatus());
         }
 
         return response;

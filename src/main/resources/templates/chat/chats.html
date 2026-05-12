@@ -42,9 +42,6 @@
             cursor: pointer;
             font-size: 14px;
         }
-        .new-chat-btn:hover {
-            background: #006699;
-        }
         .chats-list {
             flex: 1;
             overflow-y: auto;
@@ -60,9 +57,6 @@
         }
         .chat-item:hover {
             background: #f8f8f8;
-        }
-        .chat-item.active {
-            background: #e3f2fd;
         }
         .avatar {
             width: 50px;
@@ -154,10 +148,85 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
 <script>
     let currentPage = 0;
     let isLoading = false;
     let hasMore = true;
+    let stompClient = null;
+    let currentUsername = '[[${username}]]';
+
+    function connectWebSocket() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function(frame) {
+            console.log('WebSocket connected for chat list');
+
+            // Подписка на обновления чатов
+            stompClient.subscribe('/user/queue/chats_update', function(message) {
+                const updatedChat = JSON.parse(message.body);
+                updateChatInList(updatedChat);
+            });
+        });
+    }
+
+    function updateChatInList(chat) {
+        const existingItem = $(`.chat-item[data-chat-id="${chat.id}"]`);
+        const newHtml = createChatItemHtml(chat);
+
+        if (existingItem.length) {
+            existingItem.replaceWith(newHtml);
+        } else {
+            $('#chatsList').prepend(newHtml);
+        }
+
+        // Пересортировать чаты по времени последнего сообщения
+        sortChatsByLastMessage();
+    }
+
+    function sortChatsByLastMessage() {
+        const items = $('.chat-item').get();
+        items.sort(function(a, b) {
+            const timeA = $(a).find('.time').text();
+            const timeB = $(b).find('.time').text();
+            return timeB.localeCompare(timeA);
+        });
+        $.each(items, function(idx, itm) {
+            $('#chatsList').append(itm);
+        });
+    }
+
+    function createChatItemHtml(chat) {
+        const avatarHtml = chat.interlocutor?.avatarUrl
+            ? `<img src="${chat.interlocutor.avatarUrl}" alt="avatar">`
+            : `<span>${chat.interlocutor?.name?.charAt(0) || chat.interlocutor?.username?.charAt(0) || '?'}</span>`;
+
+        const unreadHtml = chat.unreadCount > 0
+            ? `<div class="unread-badge">${chat.unreadCount}</div>`
+            : '';
+
+        const lastMessageText = chat.lastMessage?.content || 'Нет сообщений';
+        const time = chat.lastMessage?.createdAt
+            ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+            : '';
+
+        return `
+      <div class="chat-item" data-chat-id="${chat.id}" onclick="location.href='/chat/${chat.id}'">
+        <div class="avatar">${avatarHtml}</div>
+        <div class="chat-info">
+          <div class="chat-name">${escapeHtml(chat.interlocutor?.name || chat.interlocutor?.username || 'Пользователь')}</div>
+          <div class="last-message">${escapeHtml(lastMessageText)}</div>
+        </div>
+        <div class="chat-meta">
+          <div class="time">${time}</div>
+          ${unreadHtml}
+        </div>
+      </div>
+    `;
+    }
 
     function loadChats(page = 0) {
         if (isLoading) return;
@@ -167,6 +236,7 @@
             url: '/api/chats',
             method: 'GET',
             data: { page: page },
+            xhrFields: { withCredentials: true },
             success: function(response) {
                 if (page === 0) {
                     $('#chatsList').empty();
@@ -174,7 +244,7 @@
 
                 if (response.content && response.content.length > 0) {
                     response.content.forEach(chat => {
-                        renderChatItem(chat);
+                        $('#chatsList').append(createChatItemHtml(chat));
                     });
                     hasMore = !response.last;
                 } else if (page === 0) {
@@ -193,36 +263,6 @@
         });
     }
 
-    function renderChatItem(chat) {
-        const avatarHtml = chat.interlocutor?.avatarUrl
-            ? `<img src="${chat.interlocutor.avatarUrl}" alt="avatar">`
-            : `<span>${chat.interlocutor?.name?.charAt(0) || '?'}</span>`;
-
-        const unreadHtml = chat.unreadCount > 0
-            ? `<div class="unread-badge">${chat.unreadCount}</div>`
-            : '';
-
-        const lastMessageText = chat.lastMessage?.content || 'Нет сообщений';
-        const time = chat.lastMessage?.createdAt
-            ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-            : '';
-
-        const chatItem = `
-                <div class="chat-item" onclick="location.href='/chat/${chat.id}'">
-                    <div class="avatar">${avatarHtml}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${escapeHtml(chat.interlocutor?.name || 'Пользователь')}</div>
-                        <div class="last-message">${escapeHtml(lastMessageText)}</div>
-                    </div>
-                    <div class="chat-meta">
-                        <div class="time">${time}</div>
-                        ${unreadHtml}
-                    </div>
-                </div>
-            `;
-        $('#chatsList').append(chatItem);
-    }
-
     function escapeHtml(text) {
         if (!text) return '';
         return text.replace(/[&<>]/g, function(m) {
@@ -233,7 +273,6 @@
         });
     }
 
-    // Бесконечная прокрутка
     $(window).on('scroll', function() {
         if ($(window).scrollTop() + $(window).height() > $(document).height() - 100) {
             if (hasMore && !isLoading) {
@@ -243,8 +282,10 @@
         }
     });
 
-    // Загружаем чаты
-    loadChats(0);
+    $(document).ready(function() {
+        loadChats(0);
+        connectWebSocket();
+    });
 </script>
 </body>
 </html>
