@@ -692,6 +692,19 @@
     gap: 8px;
 }
 
+.chat-topbar-name-link {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition-smooth);
+}
+
+.chat-topbar-name-link:hover {
+    color: var(--accent-purple);
+    text-decoration: underline;
+}
+
 .spinner-dot {
     width: 8px;
     height: 8px;

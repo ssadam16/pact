@@ -513,12 +513,17 @@ function loadChatInfo() {
         .then(response => {
             const chat = (response.content || []).find(c => c.id.toString() === chatId.toString());
             if (chat && chat.interlocutor) {
-                document.getElementById('chatTopbarName').textContent = chat.interlocutor.name || chat.interlocutor.username || 'Пользователь';
+                const username = chat.interlocutor.username || 'Пользователь';
+                const displayName = chat.interlocutor.name || username;
+
+                const nameElement = document.getElementById('chatTopbarName');
+                nameElement.innerHTML = '<a href="/user/' + encodeURIComponent(username) + '" class="chat-topbar-name-link" target="_blank" rel="noopener noreferrer">' + escapeHtml(displayName) + '</a>';
+
                 const avatarEl = document.getElementById('chatTopbarAvatar');
                 if (chat.interlocutor.avatarUrl) {
                     avatarEl.innerHTML = '<img src="' + chat.interlocutor.avatarUrl + '" alt="avatar">';
                 } else {
-                    avatarEl.innerHTML = (chat.interlocutor.name || chat.interlocutor.username || '?').charAt(0).toUpperCase();
+                    avatarEl.innerHTML = (displayName.charAt(0) || '?').toUpperCase();
                 }
             }
         });
