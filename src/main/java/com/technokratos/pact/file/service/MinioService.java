@@ -147,6 +147,25 @@ public class MinioService {
         }
     }
 
+    public void copyObject(String sourcePath, String destPath) {
+        try {
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(destPath)
+                            .source(CopySource.builder()
+                                    .bucket(bucket)
+                                    .object(sourcePath)
+                                    .build())
+                            .build()
+            );
+            log.info("File copied from '{}' to '{}'", sourcePath, destPath);
+        } catch (Exception e) {
+            log.error("Error while copying file: {}", e.getMessage());
+            throw new FileUploadException("Cannot copy file", e);
+        }
+    }
+
     public InputStream downloadFile(String filePath) {
         try {
             return minioClient.getObject(

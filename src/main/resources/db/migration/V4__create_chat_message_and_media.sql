@@ -23,9 +23,14 @@ create table if not exists chat_media (
     id uuid primary key default gen_random_uuid(),
     media_type varchar(20) not null,
     message_id uuid not null references chat_message(id) on delete cascade,
-    filename varchar(255) not null,
-    file_url varchar(255) not null,
-    order_num int not null,
+    filename varchar(511) not null,
+    file_url varchar(511) not null,
+    order_num integer not null,
+    duration bigint,
+    width integer,
+    height integer,
+    file_size bigint,
+    original_name varchar(511),
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp
 );

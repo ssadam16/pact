@@ -8,6 +8,10 @@ let hasMore = true;
 let typingTimeout = null;
 let replyToMessageId = null;
 let allChats = [];
+let pendingFiles = [];
+let isUploading = false;
+let currentMediaList = [];
+let currentMediaIndex = 0;
 
 function getCsrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
@@ -15,6 +19,35 @@ function getCsrfToken() {
 
 function getCsrfHeader() {
     return document.querySelector('meta[name="_csrf_header"]')?.content;
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '';
+    const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+}
+
+function formatDuration(seconds) {
+    if (!seconds) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function getFileIcon(mediaType, filename) {
+    if (mediaType === 'IMAGE') return '<i class="bi bi-image-fill"></i>';
+    if (mediaType === 'VIDEO') return '<i class="bi bi-camera-reels-fill"></i>';
+    if (mediaType === 'AUDIO') return '<i class="bi bi-music-note-beamed"></i>';
+    if (mediaType === 'VOICE_MESSAGE') return '<i class="bi bi-mic-fill"></i>';
+    const ext = filename?.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return '<i class="bi bi-file-pdf-fill"></i>';
+    if (ext === 'doc' || ext === 'docx') return '<i class="bi bi-file-word-fill"></i>';
+    if (ext === 'xls' || ext === 'xlsx') return '<i class="bi bi-file-excel-fill"></i>';
+    if (ext === 'ppt' || ext === 'pptx') return '<i class="bi bi-file-ppt-fill"></i>';
+    if (ext === 'txt') return '<i class="bi bi-file-text-fill"></i>';
+    if (ext === 'java' || ext === 'py' || ext === 'js' || ext === 'html' || ext === 'css') return '<i class="bi bi-file-code-fill"></i>';
+    return '<i class="bi bi-file-earmark-fill"></i>';
 }
 
 function connectWebSocket() {
@@ -38,11 +71,7 @@ function connectWebSocket() {
                     const isOut = data.message.author?.username === currentUsername;
                     el.outerHTML = buildMessageHtml(data.message, isOut);
                 }
-            } else if (data.action === 'READ') {
-                if (data.chatId === chatId || data.chatId.toString() === chatId.toString()) {
-                    markAllOutgoingRead();
-                }
-            } else {
+            } else if (data.id) {
                 const isOut = data.author?.username === currentUsername;
                 appendMessage(data, isOut);
                 if (!isOut) {
@@ -90,25 +119,112 @@ function markAllOutgoingRead() {
     });
 }
 
-function sendMessage() {
+async function uploadFiles(files) {
+    const formData = new FormData();
+    for (const file of files) {
+        formData.append('files', file);
+    }
+
+    try {
+        const response = await fetch('/api/chats/media/upload', {
+            method: 'POST',
+            headers: { [getCsrfHeader()]: getCsrfToken() },
+            body: formData
+        });
+
+        if (response.ok) {
+            return await response.json();
+        }
+        return null;
+    } catch (error) {
+        console.error('Upload error:', error);
+        return null;
+    }
+}
+
+function addMediaToPreview(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.createElement('div');
+        preview.className = 'media-preview-item';
+        preview.setAttribute('data-filename', file.name);
+
+        let content = '';
+        if (file.type.startsWith('image/')) {
+            content = `<img src="${e.target.result}" alt="preview"><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div>`;
+        } else if (file.type.startsWith('video/')) {
+            content = `<video src="${e.target.result}"></video><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Видео</span>`;
+        } else if (file.type.startsWith('audio/')) {
+            content = `<i class="bi bi-music-note-beamed"></i><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Аудио</span><span class="media-preview-name">${file.name.substring(0, 20)}</span>`;
+        } else {
+            content = `${getFileIcon('DOCUMENT', file.name)}<div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Документ</span><span class="media-preview-name">${file.name.substring(0, 20)}</span>`;
+        }
+
+        preview.innerHTML = content;
+        document.getElementById('mediaPreviewList').appendChild(preview);
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeMediaPreview(filename) {
+    pendingFiles = pendingFiles.filter(f => f.name !== filename);
+    const preview = document.querySelector(`.media-preview-item[data-filename="${filename}"]`);
+    if (preview) preview.remove();
+    if (pendingFiles.length === 0) {
+        document.getElementById('mediaPreviewContainer').style.display = 'none';
+    }
+}
+
+async function sendMessageWithMedia() {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
-    if (!content) return;
+
+    if (!content && pendingFiles.length === 0) return;
 
     if (!stompClient || !stompClient.connected) {
         showNotification('Нет соединения с сервером', 'error');
         return;
     }
 
+    let mediaList = [];
+
+    if (pendingFiles.length > 0) {
+        isUploading = true;
+        showNotification('Загрузка файлов...', 'info');
+
+        const uploaded = await uploadFiles(pendingFiles);
+        if (uploaded) {
+            mediaList = uploaded.map((m, idx) => ({
+                tempId: m.tempId,
+                filename: m.filename,
+                originalName: m.originalName,
+                mediaType: m.mediaType,
+                orderNum: idx,
+                fileSize: m.fileSize,
+                duration: m.duration,
+                width: m.width,
+                height: m.height
+            }));
+        }
+        isUploading = false;
+    }
+
     stompClient.send('/app/chat.send', {}, JSON.stringify({
         chatId: chatId,
         content: content,
         replyToMessageId: replyToMessageId,
-        mediaList: null
+        mediaList: mediaList
     }));
 
     input.value = '';
     cancelReply();
+    pendingFiles = [];
+    document.getElementById('mediaPreviewContainer').style.display = 'none';
+    document.getElementById('mediaPreviewList').innerHTML = '';
+}
+
+function sendMessage() {
+    sendMessageWithMedia();
 }
 
 function deleteMessage(messageId) {
@@ -134,8 +250,7 @@ function editMessage(messageId, oldContent) {
 function replyToMessage(messageId, authorName, content) {
     replyToMessageId = messageId;
     const replyBar = document.getElementById('replyBar');
-    const replyText = replyBar.querySelector('span');
-    replyText.innerHTML = `<i class="bi bi-reply-fill me-1"></i> Ответ ${authorName}: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`;
+    replyBar.querySelector('span').innerHTML = `<i class="bi bi-reply-fill me-1"></i> Ответ ${authorName}: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`;
     replyBar.style.display = 'flex';
     document.getElementById('messageInput').focus();
 }
@@ -198,6 +313,135 @@ function prependMessage(msg, isOutgoing) {
     area.insertAdjacentHTML('afterbegin', buildMessageHtml(msg, isOutgoing));
 }
 
+function buildMediaHtml(mediaList) {
+    if (!mediaList || mediaList.length === 0) return '';
+
+    return '<div class="message-media">' + mediaList.map((media, idx) => {
+        if (media.mediaType === 'IMAGE') {
+            return `<div class="media-item media-image" onclick="openMediaViewer(${idx})">
+                        <img src="${media.fileUrl}" alt="image" loading="lazy">
+                    </div>`;
+        } else if (media.mediaType === 'VIDEO') {
+            return `<div class="media-item media-video" onclick="openMediaViewer(${idx})">
+                        <video src="${media.fileUrl}" preload="metadata">
+                            <source src="${media.fileUrl}">
+                        </video>
+                        <div class="video-play-btn"><i class="bi bi-play-fill"></i></div>
+                    </div>`;
+        } else if (media.mediaType === 'AUDIO') {
+            return `<div class="media-item media-audio">
+                        <i class="bi bi-music-note-beamed"></i>
+                        <div class="audio-info">
+                            <div class="audio-name">${escapeHtml(media.originalName || 'Аудио')}</div>
+                            <audio controls preload="none">
+                                <source src="${media.fileUrl}">
+                            </audio>
+                        </div>
+                    </div>`;
+        } else if (media.mediaType === 'VOICE_MESSAGE') {
+            return `<div class="media-item media-voice">
+                        <button class="voice-play-btn" onclick="toggleVoiceMessage(this, '${media.fileUrl}')">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                        <div class="voice-wave"></div>
+                        <div class="voice-duration">${formatDuration(media.duration)}</div>
+                        <audio style="display: none;" preload="none">
+                            <source src="${media.fileUrl}">
+                        </audio>
+                    </div>`;
+        } else {
+            return `<div class="media-item media-file">
+                        ${getFileIcon(media.mediaType, media.originalName)}
+                        <div class="file-info">
+                            <div class="file-name">${escapeHtml(media.originalName || 'Файл')}</div>
+                            <div class="file-size">${formatFileSize(media.fileSize)}</div>
+                        </div>
+                        <a href="${media.fileUrl}" download="${escapeHtml(media.originalName || 'download')}" class="file-download">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>`;
+        }
+    }).join('') + '</div>';
+}
+
+function openMediaViewer(startIndex) {
+    const messageDiv = event?.target?.closest('.message');
+    if (!messageDiv) return;
+
+    const mediaItems = messageDiv.querySelectorAll('.media-image, .media-video');
+    currentMediaList = Array.from(mediaItems).map((item, idx) => {
+        if (item.classList.contains('media-image')) {
+            const img = item.querySelector('img');
+            return { type: 'image', src: img?.src, element: item };
+        } else {
+            const video = item.querySelector('video');
+            return { type: 'video', src: video?.querySelector('source')?.src || video?.src, element: item };
+        }
+    });
+    currentMediaIndex = startIndex;
+    updateMediaViewer();
+    const modal = new bootstrap.Modal(document.getElementById('mediaViewerModal'));
+    modal.show();
+}
+
+function updateMediaViewer() {
+    const media = currentMediaList[currentMediaIndex];
+    const container = document.getElementById('mediaViewerContent');
+    const nav = document.getElementById('mediaViewerNav');
+    const counter = document.getElementById('mediaCounter');
+
+    if (currentMediaList.length > 1) {
+        nav.style.display = 'flex';
+        counter.textContent = `${currentMediaIndex + 1} / ${currentMediaList.length}`;
+    } else {
+        nav.style.display = 'none';
+    }
+
+    if (media.type === 'image') {
+        container.innerHTML = `<img src="${media.src}" alt="media" style="max-width: 100%; max-height: 70vh;">`;
+    } else {
+        container.innerHTML = `<video src="${media.src}" controls autoplay style="max-width: 100%; max-height: 70vh;"></video>`;
+    }
+}
+
+function nextMedia() {
+    if (currentMediaIndex < currentMediaList.length - 1) {
+        currentMediaIndex++;
+        updateMediaViewer();
+    }
+}
+
+function prevMedia() {
+    if (currentMediaIndex > 0) {
+        currentMediaIndex--;
+        updateMediaViewer();
+    }
+}
+
+function toggleVoiceMessage(btn, url) {
+    const container = btn.closest('.media-voice');
+    const audio = container.querySelector('audio');
+    const icon = btn.querySelector('i');
+
+    if (audio.paused) {
+        document.querySelectorAll('.media-voice audio').forEach(a => {
+            if (a !== audio) a.pause();
+        });
+        document.querySelectorAll('.voice-play-btn i').forEach(i => {
+            i.className = 'bi bi-play-fill';
+        });
+        audio.src = url;
+        audio.play();
+        icon.className = 'bi bi-pause-fill';
+        audio.onended = () => {
+            icon.className = 'bi bi-play-fill';
+        };
+    } else {
+        audio.pause();
+        icon.className = 'bi bi-play-fill';
+    }
+}
+
 function buildMessageHtml(msg, isOutgoing) {
     const time = msg.createdAt
         ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -206,7 +450,6 @@ function buildMessageHtml(msg, isOutgoing) {
     const isEdited = msg.isEdited && !isDeleted;
     const content = escapeHtml(msg.content || '');
     const authorName = escapeHtml(msg.author?.username || 'Пользователь');
-    const authorId = msg.author?.id || '';
 
     let statusHtml = '';
     if (isOutgoing && !isDeleted) {
@@ -242,12 +485,12 @@ function buildMessageHtml(msg, isOutgoing) {
         }
     }
 
-    // Кликабельный ник — ссылка на профиль
     const authorLink = '<a href="/user/' + authorName + '" class="message-author-link" target="_blank">@' + authorName + '</a>';
+    const mediaHtml = buildMediaHtml(msg.mediaList);
 
     return '<div class="message ' + (isOutgoing ? 'outgoing' : 'incoming') + (isDeleted ? ' deleted' : '') + '" data-id="' + msg.id + '">' +
         (!isOutgoing ? '<div class="message-meta" style="margin-bottom: 2px;">' + authorLink + '</div>' : '') +
-        '<div class="message-bubble' + (isDeleted ? ' deleted' : '') + '">' + replyHtml + (isDeleted ? 'Сообщение удалено' : content) + '</div>' +
+        '<div class="message-bubble' + (isDeleted ? ' deleted' : '') + '">' + replyHtml + (isDeleted ? 'Сообщение удалено' : content) + mediaHtml + '</div>' +
         '<div class="message-meta">' + time + ' ' + statusHtml + editedHtml + actionsHtml + '</div>' +
         '</div>';
 }
@@ -355,6 +598,83 @@ function sendTyping(isTyping) {
     }
 }
 
+function initAttachMenu() {
+    const attachBtn = document.getElementById('attachBtn');
+    const attachMenu = document.getElementById('attachMenu');
+
+    if (attachBtn) {
+        attachBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            attachMenu.style.display = attachMenu.style.display === 'none' ? 'flex' : 'none';
+        });
+
+        document.addEventListener('click', function() {
+            attachMenu.style.display = 'none';
+        });
+
+        attachMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.multiple = true;
+    fileInput.accept = 'image/*,video/*,audio/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.java,.py,.js,.html,.css,.json,.xml,.md';
+
+    fileInput.onchange = async function(e) {
+        const files = Array.from(e.target.files);
+        if (pendingFiles.length + files.length > 10) {
+            showNotification('Максимум 10 файлов на одно сообщение', 'error');
+            return;
+        }
+
+        for (const file of files) {
+            if (file.size > 50 * 1024 * 1024) {
+                showNotification(`Файл ${file.name} превышает 50MB`, 'error');
+                continue;
+            }
+            pendingFiles.push(file);
+            addMediaToPreview(file);
+        }
+
+        if (pendingFiles.length > 0) {
+            document.getElementById('mediaPreviewContainer').style.display = 'block';
+        }
+        fileInput.value = '';
+    };
+
+    document.getElementById('attachPhotoBtn')?.addEventListener('click', () => {
+        fileInput.accept = 'image/*';
+        fileInput.click();
+        attachMenu.style.display = 'none';
+    });
+
+    document.getElementById('attachVideoBtn')?.addEventListener('click', () => {
+        fileInput.accept = 'video/*';
+        fileInput.click();
+        attachMenu.style.display = 'none';
+    });
+
+    document.getElementById('attachAudioBtn')?.addEventListener('click', () => {
+        fileInput.accept = 'audio/*';
+        fileInput.click();
+        attachMenu.style.display = 'none';
+    });
+
+    document.getElementById('attachDocumentBtn')?.addEventListener('click', () => {
+        fileInput.accept = '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt';
+        fileInput.click();
+        attachMenu.style.display = 'none';
+    });
+
+    document.getElementById('attachOtherBtn')?.addEventListener('click', () => {
+        fileInput.accept = '*/*';
+        fileInput.click();
+        attachMenu.style.display = 'none';
+    });
+}
+
 async function loadFriends() {
     try {
         const response = await fetch('/api/friendships/api/friends', { credentials: 'same-origin' });
@@ -365,33 +685,24 @@ async function loadFriends() {
             }
             renderFriendsList(friends);
         } else {
-            console.error('Failed to load friends:', response.status);
-            document.getElementById('friendsListModal').innerHTML =
-                '<div class="text-center py-4 text-secondary-custom">Ошибка загрузки списка друзей</div>';
+            document.getElementById('friendsListModal').innerHTML = '<div class="text-center py-4 text-secondary-custom">Ошибка загрузки списка друзей</div>';
         }
     } catch (error) {
-        console.error('Error loading friends:', error);
-        document.getElementById('friendsListModal').innerHTML =
-            '<div class="text-center py-4 text-secondary-custom">Ошибка загрузки списка друзей</div>';
+        document.getElementById('friendsListModal').innerHTML = '<div class="text-center py-4 text-secondary-custom">Ошибка загрузки списка друзей</div>';
     }
 }
 
 function renderFriendsList(friends) {
     const container = document.getElementById('friendsListModal');
-
     if (!friends || friends.length === 0) {
         container.innerHTML = '<div class="text-center py-4 text-secondary-custom">У вас пока нет друзей</div>';
         return;
     }
-
     container.innerHTML = friends.map(friend => `
         <div class="friend-item" data-user-id="${friend.id}" data-username="${friend.username}" data-name="${friend.name || ''}">
             <div class="d-flex align-items-center flex-grow-1">
                 <div class="friend-avatar">
-                    ${friend.avatarUrl
-        ? `<img src="${friend.avatarUrl}" alt="Avatar">`
-        : `<span>${(friend.name || friend.username || 'U').charAt(0).toUpperCase()}</span>`
-    }
+                    ${friend.avatarUrl ? `<img src="${friend.avatarUrl}" alt="Avatar">` : `<span>${(friend.name || friend.username || 'U').charAt(0).toUpperCase()}</span>`}
                 </div>
                 <div class="friend-info">
                     <div class="friend-name">${escapeHtml(friend.name || friend.username)}</div>
@@ -406,10 +717,6 @@ function renderFriendsList(friends) {
 
     const searchInput = document.getElementById('friendSearchInput');
     if (searchInput) {
-        const existingListener = searchInput._listener;
-        if (existingListener) {
-            searchInput.removeEventListener('input', existingListener);
-        }
         const handler = function() {
             const query = this.value.toLowerCase().trim();
             const items = container.querySelectorAll('.friend-item');
@@ -422,17 +729,14 @@ function renderFriendsList(friends) {
                 if (isVisible) hasVisible = true;
             });
             if (!hasVisible && query) {
-                const noResult = container.querySelector('.no-result-msg');
-                if (!noResult) {
+                if (!container.querySelector('.no-result-msg')) {
                     container.insertAdjacentHTML('beforeend', '<div class="no-result-msg text-center py-3 text-secondary-custom small">Ничего не найдено</div>');
                 }
             } else {
-                const noResult = container.querySelector('.no-result-msg');
-                if (noResult) noResult.remove();
+                container.querySelector('.no-result-msg')?.remove();
             }
         };
         searchInput.addEventListener('input', handler);
-        searchInput._listener = handler;
     }
 }
 
@@ -444,7 +748,6 @@ async function createChatWithUser(userId, username) {
             headers: { 'Content-Type': 'application/json', [getCsrfHeader()]: getCsrfToken() },
             body: JSON.stringify({ secondUserId: userId })
         });
-
         if (response.ok) {
             const chat = await response.json();
             window.location.href = '/chat/' + chat.id;
@@ -461,51 +764,9 @@ async function createChatWithUser(userId, username) {
 function initNewChatModal() {
     const modal = document.getElementById('newChatModal');
     if (modal) {
-        modal.addEventListener('show.bs.modal', function() {
-            loadFriends();
-        });
+        modal.addEventListener('show.bs.modal', function() { loadFriends(); });
     }
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-    const input = document.getElementById('messageInput');
-    const searchInput = document.getElementById('chatSearchInput');
-
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            renderChatList(allChats);
-        });
-    }
-
-    input.addEventListener('input', function () {
-        clearTimeout(typingTimeout);
-        sendTyping(true);
-        typingTimeout = setTimeout(function () { sendTyping(false); }, 1500);
-    });
-
-    input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    document.getElementById('messagesArea').addEventListener('scroll', function () {
-        if (this.scrollTop < 60 && hasMore && !isLoading) {
-            currentPage++;
-            loadMessages(currentPage);
-        }
-    });
-
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
-    document.getElementById('cancelReplyBtn').addEventListener('click', cancelReply);
-
-    initNewChatModal();
-    loadChats();
-    loadChatInfo();
-    loadMessages(0);
-    connectWebSocket();
-});
 
 function loadChatInfo() {
     fetch('/api/chats?page=0&size=100', { credentials: 'same-origin' })
@@ -515,10 +776,7 @@ function loadChatInfo() {
             if (chat && chat.interlocutor) {
                 const username = chat.interlocutor.username || 'Пользователь';
                 const displayName = chat.interlocutor.name || username;
-
-                const nameElement = document.getElementById('chatTopbarName');
-                nameElement.innerHTML = '<a href="/user/' + encodeURIComponent(username) + '" class="chat-topbar-name-link" target="_blank" rel="noopener noreferrer">' + escapeHtml(displayName) + '</a>';
-
+                document.getElementById('chatTopbarName').innerHTML = '<a href="/user/' + encodeURIComponent(username) + '" class="chat-topbar-name-link" target="_blank" rel="noopener noreferrer">' + escapeHtml(displayName) + '</a>';
                 const avatarEl = document.getElementById('chatTopbarAvatar');
                 if (chat.interlocutor.avatarUrl) {
                     avatarEl.innerHTML = '<img src="' + chat.interlocutor.avatarUrl + '" alt="avatar">';
@@ -529,20 +787,49 @@ function loadChatInfo() {
         });
 }
 
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('messageInput');
+    const searchInput = document.getElementById('chatSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() { renderChatList(allChats); });
+    }
+    input.addEventListener('input', function () {
+        clearTimeout(typingTimeout);
+        sendTyping(true);
+        typingTimeout = setTimeout(function () { sendTyping(false); }, 1500);
+    });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    document.getElementById('messagesArea').addEventListener('scroll', function () {
+        if (this.scrollTop < 60 && hasMore && !isLoading) {
+            currentPage++;
+            loadMessages(currentPage);
+        }
+    });
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('cancelReplyBtn').addEventListener('click', cancelReply);
+    document.getElementById('mediaPrevBtn')?.addEventListener('click', prevMedia);
+    document.getElementById('mediaNextBtn')?.addEventListener('click', nextMedia);
+
+    initAttachMenu();
+    initNewChatModal();
+    loadChats();
+    loadChatInfo();
+    loadMessages(0);
+    connectWebSocket();
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('chatToggleBtn');
     const sidebar = document.getElementById('chatSidebar');
-
     if (toggleBtn && sidebar) {
-        toggleBtn.addEventListener('click', function() {
-            sidebar.classList.toggle('open');
-        });
-
+        toggleBtn.addEventListener('click', function() { sidebar.classList.toggle('open'); });
         document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768 &&
-                sidebar.classList.contains('open') &&
-                !sidebar.contains(e.target) &&
-                !toggleBtn.contains(e.target)) {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
                 sidebar.classList.remove('open');
             }
         });

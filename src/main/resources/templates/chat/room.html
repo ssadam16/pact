@@ -60,14 +60,47 @@
           <span><i class="bi bi-reply-fill me-1"></i> Ответ на сообщение</span>
           <button id="cancelReplyBtn"><i class="bi bi-x-lg"></i></button>
         </div>
+        <div id="mediaPreviewContainer" class="media-preview-container" style="display: none;">
+          <div id="mediaPreviewList" class="media-preview-list"></div>
+        </div>
         <textarea class="chat-text-input" id="messageInput" rows="1"
                   placeholder="Написать сообщение..." autocomplete="off"></textarea>
       </div>
-      <button class="chat-send-btn" id="sendBtn" title="Отправить">
-        <i class="bi bi-send-fill"></i>
-      </button>
+      <div class="chat-actions">
+        <button class="chat-attach-btn" id="attachBtn" title="Прикрепить">
+          <i class="bi bi-paperclip"></i>
+        </button>
+        <div id="attachMenu" class="attach-menu" style="display: none;">
+          <button id="attachPhotoBtn"><i class="bi bi-image-fill"></i> Фото</button>
+          <button id="attachVideoBtn"><i class="bi bi-camera-reels-fill"></i> Видео</button>
+          <button id="attachAudioBtn"><i class="bi bi-music-note-beamed"></i> Аудио</button>
+          <button id="attachDocumentBtn"><i class="bi bi-file-earmark-fill"></i> Документ</button>
+          <button id="attachOtherBtn"><i class="bi bi-file-earmark-fill"></i> Файл</button>
+        </div>
+        <button class="chat-send-btn" id="sendBtn" title="Отправить">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
     </div>
   </main>
+</div>
+
+<div class="modal fade" id="mediaViewerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content media-viewer-content">
+      <div class="modal-header border-0 pb-0">
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center" id="mediaViewerBody">
+        <div id="mediaViewerContent"></div>
+        <div class="media-viewer-nav" id="mediaViewerNav" style="display: none;">
+          <button id="mediaPrevBtn"><i class="bi bi-chevron-left"></i></button>
+          <span id="mediaCounter"></span>
+          <button id="mediaNextBtn"><i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="newChatModal" tabindex="-1" data-bs-backdrop="static">

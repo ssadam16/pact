@@ -30,11 +30,7 @@ public class ChatWebSocketController {
         UUID currentUserId = extractUserId(principal);
         log.info("WebSocket send message from user: {} to chat: {}", currentUserId, request.getChatId());
 
-        List<MessageResponse> messages = chatService.sendMessage(request.getChatId(), request, currentUserId);
-
-        messages.forEach(m ->
-            messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), m)
-        );
+        chatService.sendMessage(request.getChatId(), request, currentUserId);
     }
 
     @MessageMapping("/chat.read")
@@ -44,14 +40,6 @@ public class ChatWebSocketController {
         log.info("WebSocket mark read from user: {} in chat: {}", currentUserId, request.getChatId());
 
         chatService.markMessagesAsRead(request.getChatId(), request.getMessageId(), currentUserId);
-
-        Map<String, Object> readPayload = new HashMap<>();
-        readPayload.put("action", "READ");
-        readPayload.put("chatId", request.getChatId());
-        readPayload.put("readBy", currentUserId);
-        readPayload.put("readUpToMessageId", request.getMessageId());
-
-        messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(readPayload));
     }
 
     @MessageMapping("/chat.typing")

@@ -8,7 +8,12 @@ public record MediaUploadResponse(
         String filename,
         String originalName,
         String fileUrl,
-        ChatMedia.MediaType mediaType) {
+        Long fileSize,
+        ChatMedia.MediaType mediaType,
+        Long duration,
+        Integer width,
+        Integer height
+) {
     @Builder
     public MediaUploadResponse {}
 }

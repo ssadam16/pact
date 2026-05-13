@@ -7,6 +7,7 @@ import com.technokratos.pact.chat.mapper.ChatMapper;
 import com.technokratos.pact.chat.mapper.ChatMessageMapper;
 import com.technokratos.pact.chat.model.Chat;
 import com.technokratos.pact.chat.model.ChatMessage;
+import com.technokratos.pact.chat.model.ChatMedia;
 import com.technokratos.pact.chat.repository.ChatMessageRepository;
 import com.technokratos.pact.chat.repository.ChatRepository;
 import com.technokratos.pact.file.service.AvatarService;
@@ -108,7 +109,17 @@ public class ChatService {
         User recipient = getChatRecipient(chat, currentUserId);
 
         String content = request.getContent() != null ? request.getContent() : "";
+        boolean hasMedia = request.getMediaList() != null && !request.getMediaList().isEmpty();
+
         List<String> contentParts = splitMessageByLength(content, MAX_MESSAGE_LENGTH);
+        // Если контент пустой, но есть медиа — создаём одно "пустое" сообщение, чтобы прикрепить к нему файлы
+        if (contentParts.isEmpty()) {
+            if (!hasMedia) {
+                return new ArrayList<>();
+            }
+            contentParts.add("");
+        }
+
         List<MessageResponse> sentMessages = new ArrayList<>();
 
         for (int i = 0; i < contentParts.size(); i++) {
@@ -123,19 +134,32 @@ public class ChatService {
                     .build();
 
             message = messageRepository.save(message);
+
+            // Медиа прикрепляем только к последней части сообщения (чтобы при длинном тексте файлы не дублировались)
+            if (hasMedia && i == contentParts.size() - 1) {
+                List<ChatMedia> mediaList = mediaService.moveAndSaveMedia(request.getMediaList(), message, currentUserId);
+                message.setMediaList(mediaList);
+                message = messageRepository.save(message);
+            }
+
             chatRepository.updateLastActivity(chatId);
 
             MessageResponse response = toMessageResponse(message, currentUserId);
+            mediaService.addMediaToResponse(message, response);
             sentMessages.add(response);
 
-            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/messages", response);
-            messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/messages", response);
+            // Отправка через WebSocket (единственное место рассылки в /topic — контроллер этого больше не делает)
+            messagingTemplate.convertAndSend("/topic/chat." + chatId, response);
+
+            // Обновление списка чатов для обоих участников
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update",
+                    getChatResponse(chat, recipient.getId()));
+            messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update",
+                    getChatResponse(chat, author.getId()));
         }
 
-        messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update",
-                getChatResponse(chat, author.getId()));
-        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update",
-                getChatResponse(chat, recipient.getId()));
+        // Очистка временных файлов
+        mediaService.cleanupTempMedia(currentUserId);
 
         return sentMessages;
     }
@@ -183,6 +207,8 @@ public class ChatService {
 
     /**
      * Called from WebSocket — messageId may be provided for the READ payload.
+     * Read-уведомление шлётся ТОЛЬКО автору непрочитанных сообщений (unicast),
+     * и только если что-то реально было прочитано.
      */
     public void markMessagesAsRead(UUID chatId, UUID messageId, UUID currentUserId) {
         log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);

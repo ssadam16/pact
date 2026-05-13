@@ -28,4 +28,11 @@ public class ChatMediaController {
         List<MediaUploadResponse> responses = chatMediaService.uploadTempMedia(files, currentUser.getId());
         return ResponseEntity.ok(responses);
     }
+
+    @DeleteMapping("/temp")
+    public ResponseEntity<Void> cleanupTempMedia(@AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        chatMediaService.cleanupTempMedia(currentUser.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

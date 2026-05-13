@@ -35,6 +35,11 @@ public class ChatMessage extends BaseEntity {
     @ToString.Exclude
     private Chat chat;
 
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @Builder.Default
+    private List<ChatMedia> mediaList = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MessageStatus status;
@@ -47,11 +52,6 @@ public class ChatMessage extends BaseEntity {
     @JoinColumn(name = "reply_to_message_id")
     @ToString.Exclude
     private ChatMessage replyToMessage;
-
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @Builder.Default
-    private List<ChatMedia> mediaList = new ArrayList<>();
 
     @Override
     public final boolean equals(Object o) {

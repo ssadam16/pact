@@ -21,6 +21,7 @@ public class SendMessageRequest {
 
     @Data
     public static class MediaUploadInfo {
+        private String tempId;
         private String filename;
         private String originalName;
         private String mediaType;
@@ -28,5 +29,6 @@ public class SendMessageRequest {
         private Long duration;
         private Integer width;
         private Integer height;
+        private Long fileSize;
     }
 }

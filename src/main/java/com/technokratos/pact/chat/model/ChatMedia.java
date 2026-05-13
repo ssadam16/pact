@@ -6,6 +6,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -36,6 +38,18 @@ public class ChatMedia extends BaseEntity {
     @Column(name = "order_num", nullable = false)
     private Integer orderNum;
 
+    @Column(name = "original_name")
+    private String originalName;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    private Long duration;
+
+    private Integer width;
+
+    private Integer height;
+
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;
@@ -59,6 +73,7 @@ public class ChatMedia extends BaseEntity {
         IMAGE,
         VIDEO,
         AUDIO,
+        VOICE_MESSAGE,
         DOCUMENT,
         OTHER
     }
