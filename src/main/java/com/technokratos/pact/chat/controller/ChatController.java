@@ -17,26 +17,20 @@ public class ChatController {
 
     @GetMapping("/list")
     public String chatsPage(Model model, Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            model.addAttribute("username", authentication.getName());
-        }
+        model.addAttribute("username", authentication.getName());
         return "chat/chats";
     }
 
     @GetMapping("/{chatId}")
     public String chatRoomPage(@PathVariable UUID chatId, Model model, Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            model.addAttribute("username", authentication.getName());
-            model.addAttribute("chatId", chatId);
-        }
+        model.addAttribute("username", authentication.getName());
+        model.addAttribute("chatId", chatId);
         return "chat/room";
     }
 
     @GetMapping("/new")
     public String newChatPage(Model model, Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            model.addAttribute("username", authentication.getName());
-        }
+        model.addAttribute("username", authentication.getName());
         return "chat/new-chat";
     }
 }

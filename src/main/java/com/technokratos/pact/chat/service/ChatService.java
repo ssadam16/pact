@@ -112,7 +112,6 @@ public class ChatService {
         boolean hasMedia = request.getMediaList() != null && !request.getMediaList().isEmpty();
 
         List<String> contentParts = splitMessageByLength(content, MAX_MESSAGE_LENGTH);
-        // Если контент пустой, но есть медиа — создаём одно "пустое" сообщение, чтобы прикрепить к нему файлы
         if (contentParts.isEmpty()) {
             if (!hasMedia) {
                 return new ArrayList<>();
@@ -135,7 +134,6 @@ public class ChatService {
 
             message = messageRepository.save(message);
 
-            // Медиа прикрепляем только к последней части сообщения (чтобы при длинном тексте файлы не дублировались)
             if (hasMedia && i == contentParts.size() - 1) {
                 List<ChatMedia> mediaList = mediaService.moveAndSaveMedia(request.getMediaList(), message, currentUserId);
                 message.setMediaList(mediaList);
@@ -148,17 +146,14 @@ public class ChatService {
             mediaService.addMediaToResponse(message, response);
             sentMessages.add(response);
 
-            // Отправка через WebSocket (единственное место рассылки в /topic — контроллер этого больше не делает)
             messagingTemplate.convertAndSend("/topic/chat." + chatId, response);
 
-            // Обновление списка чатов для обоих участников
             messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/chats_update",
                     getChatResponse(chat, recipient.getId()));
             messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/chats_update",
                     getChatResponse(chat, author.getId()));
         }
 
-        // Очистка временных файлов
         mediaService.cleanupTempMedia(currentUserId);
 
         return sentMessages;
@@ -205,11 +200,6 @@ public class ChatService {
         return toMessageResponse(message, currentUserId);
     }
 
-    /**
-     * Called from WebSocket — messageId may be provided for the READ payload.
-     * Read-уведомление шлётся ТОЛЬКО автору непрочитанных сообщений (unicast),
-     * и только если что-то реально было прочитано.
-     */
     public void markMessagesAsRead(UUID chatId, UUID messageId, UUID currentUserId) {
         log.info("Marking messages as read in chat: {} by user: {}", chatId, currentUserId);
 
@@ -231,9 +221,6 @@ public class ChatService {
         messagingTemplate.convertAndSendToUser(author.getUsername(), "/queue/read", readPayload);
     }
 
-    /**
-     * Called from REST controller when user opens the chat — no messageId needed.
-     */
     public void markAllMessagesAsRead(UUID chatId, UUID currentUserId) {
         log.info("Marking all messages as read in chat: {} by user: {}", chatId, currentUserId);
 

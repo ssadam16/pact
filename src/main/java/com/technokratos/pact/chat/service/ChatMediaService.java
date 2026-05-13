@@ -38,10 +38,6 @@ public class ChatMediaService {
         return uploadTempMedia(files, userId, null);
     }
 
-    /**
-     * @param kind подсказка типа медиа: "voice" — для голосовых сообщений (webm/ogg blob с микрофона).
-     *             Если null, тип определяется по mime-type / расширению.
-     */
     public List<MediaUploadResponse> uploadTempMedia(List<MultipartFile> files, UUID userId, String kind) {
         if (files == null || files.isEmpty()) {
             return new ArrayList<>();
@@ -56,6 +52,7 @@ public class ChatMediaService {
         for (MultipartFile file : files) {
             try {
                 validateFile(file);
+
                 ChatMedia.MediaType mediaType = "voice".equalsIgnoreCase(kind)
                         ? ChatMedia.MediaType.VOICE_MESSAGE
                         : detectMediaType(file);
@@ -98,10 +95,8 @@ public class ChatMediaService {
                 String tempPath = MinioService.Folders.CHAT_MEDIA + "/temp/" + userId + "/" + info.getFilename();
                 String permanentPath = MinioService.Folders.CHAT_MEDIA + "/" + info.getMediaType().toLowerCase() + "/" + UUID.randomUUID() + "_" + info.getFilename();
 
-                // Копируем файл из временной папки в постоянную
                 minioService.copyObject(tempPath, permanentPath);
 
-                // Получаем URL для постоянного файла
                 String fileUrl = minioService.getFileUrl(permanentPath);
 
                 ChatMedia media = ChatMedia.builder()
@@ -119,7 +114,6 @@ public class ChatMediaService {
 
                 mediaList.add(mediaRepository.save(media));
 
-                // Удаляем временный файл после успешного копирования
                 minioService.deleteFile(tempPath);
 
             } catch (Exception e) {
