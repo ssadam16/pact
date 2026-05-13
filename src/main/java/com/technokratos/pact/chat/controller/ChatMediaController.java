@@ -29,6 +29,16 @@ public class ChatMediaController {
         return ResponseEntity.ok(responses);
     }
 
+    @PostMapping("/upload-voice")
+    public ResponseEntity<MediaUploadResponse> uploadVoice(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserDetailsImpl currentUser) {
+
+        List<MediaUploadResponse> responses = chatMediaService.uploadTempMedia(
+                List.of(file), currentUser.getId(), "voice");
+        return ResponseEntity.ok(responses.isEmpty() ? null : responses.get(0));
+    }
+
     @DeleteMapping("/temp")
     public ResponseEntity<Void> cleanupTempMedia(@AuthenticationPrincipal UserDetailsImpl currentUser) {
 

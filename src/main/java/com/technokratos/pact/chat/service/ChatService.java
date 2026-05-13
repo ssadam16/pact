@@ -52,7 +52,7 @@ public class ChatService {
         log.info("Creating chat between users: {} and {}", currentUserId, request.getSecondUserId());
 
         Optional<Chat> existingChat = chatRepository
-                .findByFirstUserIdAndSecondUserId(currentUserId, request.getSecondUserId());
+                .findChatBetweenUsers(currentUserId, request.getSecondUserId());
 
         if (existingChat.isPresent()) {
             log.info("Chat already exists: {}", existingChat.get().getId());

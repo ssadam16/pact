@@ -18,6 +18,11 @@ public interface ChatRepository extends JpaRepository<Chat, UUID> {
 
     Optional<Chat> findByFirstUserIdAndSecondUserId(UUID firstUserId, UUID secondUserId);
 
+    @Query("SELECT c FROM Chat c WHERE " +
+            "(c.firstUser.id = :userA AND c.secondUser.id = :userB) OR " +
+            "(c.firstUser.id = :userB AND c.secondUser.id = :userA)")
+    Optional<Chat> findChatBetweenUsers(@Param("userA") UUID userA, @Param("userB") UUID userB);
+
     @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.chat.id = :chatId AND m.author.id != :userId AND m.readAt IS NULL")
     long countUnreadMessages(@Param("chatId") UUID chatId, @Param("userId") UUID userId);
 

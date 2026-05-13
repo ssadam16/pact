@@ -386,7 +386,10 @@
 }
 
 .outgoing .message-reply {
-    background: rgba(255, 255, 255, 0.12);
+    /* Делаем фрагмент сообщения, на которое отвечают, контрастным относительно фиолетового бабла */
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-left: 2px solid var(--accent-cyan);
 }
 
 .message-reply-author {
@@ -396,7 +399,11 @@
 }
 
 .outgoing .message-reply-author {
-    color: #c084fc;
+    color: var(--accent-cyan);
+}
+
+.outgoing .message-reply-content {
+    color: var(--text-primary);
 }
 
 .message-reply-content {
@@ -807,18 +814,59 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+
+.voice-play-btn:hover {
+    background: var(--accent-purple-dark);
 }
 
 .voice-wave {
     flex: 1;
-    height: 32px;
-    background: repeating-linear-gradient(45deg, var(--accent-purple), var(--accent-purple) 2px, transparent 2px, transparent 8px);
-    border-radius: 16px;
+    height: 6px;
+    background: rgba(139, 92, 246, 0.18);
+    border-radius: 3px;
+    position: relative;
+    overflow: hidden;
+}
+
+.voice-wave-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+    border-radius: 3px;
+    transition: width 0.1s linear;
+}
+
+.outgoing .voice-wave {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.outgoing .voice-wave-progress {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.outgoing .voice-play-btn {
+    background: white;
+    color: var(--accent-purple-dark);
+}
+
+.outgoing .voice-play-btn:hover {
+    background: #f3f4f6;
 }
 
 .voice-duration {
     font-size: 12px;
     color: var(--text-secondary);
+    min-width: 38px;
+    text-align: right;
+}
+
+.outgoing .voice-duration {
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .media-file {
@@ -1059,5 +1107,150 @@
     }
     .chat-input-area {
         padding: 12px 16px;
+    }
+}
+/* ========== Voice recorder bar ========== */
+.voice-recorder-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    margin-bottom: 8px;
+}
+
+.voice-recorder-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: var(--transition-smooth);
+}
+
+.voice-recorder-btn.voice-cancel {
+    background: rgba(239, 68, 68, 0.85);
+}
+
+.voice-recorder-btn.voice-cancel:hover {
+    background: #ef4444;
+}
+
+.voice-recorder-btn.voice-stop {
+    background: var(--accent-purple);
+}
+
+.voice-recorder-btn.voice-stop:hover {
+    background: var(--accent-purple-dark);
+}
+
+.voice-recorder-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.voice-recorder-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+    animation: voice-pulse 1.2s ease-out infinite;
+}
+
+@keyframes voice-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.65); }
+    70%  { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.voice-recorder-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 48px;
+}
+
+.voice-recorder-hint {
+    flex: 1;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.chat-attach-btn.recording {
+    background: rgba(239, 68, 68, 0.18) !important;
+    color: #ef4444 !important;
+}
+
+/* ========== Абстрактный фон чата ========== */
+.chat-bg-pattern {
+    position: relative;
+    background-color: var(--bg-dark);
+    background-image:
+            radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.12) 0, transparent 38%),
+            radial-gradient(circle at 88% 22%, rgba(6, 182, 212, 0.10) 0, transparent 42%),
+            radial-gradient(circle at 22% 82%, rgba(6, 182, 212, 0.08) 0, transparent 36%),
+            radial-gradient(circle at 78% 78%, rgba(139, 92, 246, 0.10) 0, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0, transparent 55%);
+    background-attachment: local;
+}
+
+.chat-bg-pattern::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.55;
+    z-index: 0;
+    background-image:
+            url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='520' height='520' viewBox='0 0 520 520'>\
+<g fill='none' stroke='%238b5cf6' stroke-opacity='0.10' stroke-width='1'>\
+<circle cx='80' cy='90' r='42'/>\
+<circle cx='430' cy='120' r='28'/>\
+<circle cx='200' cy='260' r='56'/>\
+<circle cx='400' cy='380' r='38'/>\
+<circle cx='120' cy='430' r='30'/>\
+<path d='M40 200 Q140 140 240 220 T440 180'/>\
+<path d='M60 360 Q180 300 300 380 T500 320'/>\
+<path d='M0 80 Q120 20 260 70 T520 60'/>\
+</g>\
+<g fill='none' stroke='%2306b6d4' stroke-opacity='0.08' stroke-width='1'>\
+<polygon points='340,40 380,80 340,120 300,80'/>\
+<polygon points='80,250 120,290 80,330 40,290'/>\
+<polygon points='460,260 490,290 460,320 430,290'/>\
+<path d='M30 460 L90 420 L150 460 L210 420 L270 460'/>\
+<path d='M280 90 L320 50 L380 80 L420 40'/>\
+</g>\
+<g fill='%238b5cf6' fill-opacity='0.07'>\
+<circle cx='250' cy='90' r='3'/>\
+<circle cx='180' cy='180' r='3'/>\
+<circle cx='350' cy='220' r='3'/>\
+<circle cx='90' cy='310' r='3'/>\
+<circle cx='420' cy='450' r='3'/>\
+<circle cx='480' cy='80' r='3'/>\
+<circle cx='30' cy='180' r='3'/>\
+</g>\
+</svg>");
+    background-repeat: repeat;
+    background-size: 520px 520px;
+}
+
+.chat-bg-pattern > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Отключаем тяжёлый фон на узких экранах для производительности */
+@media (max-width: 480px) {
+    .chat-bg-pattern::before {
+        opacity: 0.35;
+        background-size: 380px 380px;
     }
 }

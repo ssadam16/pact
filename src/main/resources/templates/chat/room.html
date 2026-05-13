@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <div class="messages-area" id="messagesArea"></div>
+    <div class="messages-area chat-bg-pattern" id="messagesArea"></div>
 
     <div class="typing-indicator" id="typingIndicator"></div>
 
@@ -62,6 +62,19 @@
         </div>
         <div id="mediaPreviewContainer" class="media-preview-container" style="display: none;">
           <div id="mediaPreviewList" class="media-preview-list"></div>
+        </div>
+        <div id="voiceRecorderBar" class="voice-recorder-bar" style="display: none;">
+          <button id="voiceCancelBtn" class="voice-recorder-btn voice-cancel" title="Отменить">
+            <i class="bi bi-trash-fill"></i>
+          </button>
+          <div class="voice-recorder-indicator">
+            <span class="voice-recorder-dot"></span>
+            <span class="voice-recorder-time" id="voiceRecorderTime">00:00</span>
+          </div>
+          <div class="voice-recorder-hint">Идёт запись...</div>
+          <button id="voiceStopBtn" class="voice-recorder-btn voice-stop" title="Отправить">
+            <i class="bi bi-send-fill"></i>
+          </button>
         </div>
         <textarea class="chat-text-input" id="messageInput" rows="1"
                   placeholder="Написать сообщение..." autocomplete="off"></textarea>
@@ -77,6 +90,9 @@
           <button id="attachDocumentBtn"><i class="bi bi-file-earmark-fill"></i> Документ</button>
           <button id="attachOtherBtn"><i class="bi bi-file-earmark-fill"></i> Файл</button>
         </div>
+        <button class="chat-attach-btn" id="voiceRecordBtn" title="Записать голосовое сообщение">
+          <i class="bi bi-mic-fill"></i>
+        </button>
         <button class="chat-send-btn" id="sendBtn" title="Отправить">
           <i class="bi bi-send-fill"></i>
         </button>

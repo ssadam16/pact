@@ -35,6 +35,14 @@ public class ChatMediaService {
     private String bucket;
 
     public List<MediaUploadResponse> uploadTempMedia(List<MultipartFile> files, UUID userId) {
+        return uploadTempMedia(files, userId, null);
+    }
+
+    /**
+     * @param kind подсказка типа медиа: "voice" — для голосовых сообщений (webm/ogg blob с микрофона).
+     *             Если null, тип определяется по mime-type / расширению.
+     */
+    public List<MediaUploadResponse> uploadTempMedia(List<MultipartFile> files, UUID userId, String kind) {
         if (files == null || files.isEmpty()) {
             return new ArrayList<>();
         }
@@ -48,9 +56,11 @@ public class ChatMediaService {
         for (MultipartFile file : files) {
             try {
                 validateFile(file);
-                ChatMedia.MediaType mediaType = detectMediaType(file);
+                ChatMedia.MediaType mediaType = "voice".equalsIgnoreCase(kind)
+                        ? ChatMedia.MediaType.VOICE_MESSAGE
+                        : detectMediaType(file);
 
-                FileInfo fileInfo = minioService.uploadFile(
+                FileInfo fileInfo = minioService.uploadChatFile(
                         file,
                         MinioService.Folders.CHAT_MEDIA + "/temp/" + userId
                 );

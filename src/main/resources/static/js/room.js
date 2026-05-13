@@ -13,6 +13,13 @@ let isUploading = false;
 let currentMediaList = [];
 let currentMediaIndex = 0;
 
+let mediaRecorder = null;
+let voiceChunks = [];
+let voiceStartTime = 0;
+let voiceTimerId = null;
+let voiceStream = null;
+let voiceCancelled = false;
+
 function getCsrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
 }
@@ -29,7 +36,7 @@ function formatFileSize(bytes) {
 }
 
 function formatDuration(seconds) {
-    if (!seconds) return '00:00';
+    if (!seconds && seconds !== 0) return '00:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -45,8 +52,9 @@ function getFileIcon(mediaType, filename) {
     if (ext === 'doc' || ext === 'docx') return '<i class="bi bi-file-word-fill"></i>';
     if (ext === 'xls' || ext === 'xlsx') return '<i class="bi bi-file-excel-fill"></i>';
     if (ext === 'ppt' || ext === 'pptx') return '<i class="bi bi-file-ppt-fill"></i>';
-    if (ext === 'txt') return '<i class="bi bi-file-text-fill"></i>';
-    if (ext === 'java' || ext === 'py' || ext === 'js' || ext === 'html' || ext === 'css') return '<i class="bi bi-file-code-fill"></i>';
+    if (ext === 'txt' || ext === 'md') return '<i class="bi bi-file-text-fill"></i>';
+    if (ext === 'zip' || ext === 'rar' || ext === '7z' || ext === 'tar' || ext === 'gz') return '<i class="bi bi-file-zip-fill"></i>';
+    if (ext === 'java' || ext === 'py' || ext === 'js' || ext === 'ts' || ext === 'html' || ext === 'css' || ext === 'json' || ext === 'xml' || ext === 'c' || ext === 'cpp' || ext === 'h') return '<i class="bi bi-file-code-fill"></i>';
     return '<i class="bi bi-file-earmark-fill"></i>';
 }
 
@@ -62,8 +70,15 @@ function connectWebSocket() {
             if (data.action === 'DELETE') {
                 const el = document.querySelector('.message[data-id="' + data.messageId + '"]');
                 if (el) {
-                    el.querySelector('.message-bubble').textContent = 'Сообщение удалено';
-                    el.querySelector('.message-bubble').classList.add('deleted');
+                    const bubble = el.querySelector('.message-bubble');
+                    if (bubble) {
+                        bubble.textContent = 'Сообщение удалено';
+                        bubble.classList.add('deleted');
+                    }
+                    el.classList.add('deleted');
+                    // Убираем кнопки и медиа у удалённого сообщения
+                    el.querySelectorAll('.message-actions, .message-reply, .message-media, .message-edited')
+                        .forEach(node => node.remove());
                 }
             } else if (data.action === 'EDIT') {
                 const el = document.querySelector('.message[data-id="' + data.message.id + '"]');
@@ -142,6 +157,30 @@ async function uploadFiles(files) {
     }
 }
 
+async function uploadVoice(blob, durationSec) {
+    const formData = new FormData();
+    const ext = (blob.type && blob.type.includes('ogg')) ? 'ogg' : 'webm';
+    const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: blob.type || 'audio/webm' });
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/chats/media/upload-voice', {
+            method: 'POST',
+            headers: { [getCsrfHeader()]: getCsrfToken() },
+            body: formData
+        });
+        if (response.ok) {
+            const m = await response.json();
+            if (m) m.duration = durationSec;
+            return m;
+        }
+        return null;
+    } catch (error) {
+        console.error('Voice upload error:', error);
+        return null;
+    }
+}
+
 function addMediaToPreview(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -151,16 +190,20 @@ function addMediaToPreview(file) {
 
         let content = '';
         if (file.type.startsWith('image/')) {
-            content = `<img src="${e.target.result}" alt="preview"><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div>`;
+            content = `<img src="${e.target.result}" alt="preview"><div class="media-preview-remove" data-filename="${escapeAttr(file.name)}">&times;</div>`;
         } else if (file.type.startsWith('video/')) {
-            content = `<video src="${e.target.result}"></video><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Видео</span>`;
+            content = `<video src="${e.target.result}"></video><div class="media-preview-remove" data-filename="${escapeAttr(file.name)}">&times;</div><span class="media-preview-badge">Видео</span>`;
         } else if (file.type.startsWith('audio/')) {
-            content = `<i class="bi bi-music-note-beamed"></i><div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Аудио</span><span class="media-preview-name">${file.name.substring(0, 20)}</span>`;
+            content = `<i class="bi bi-music-note-beamed"></i><div class="media-preview-remove" data-filename="${escapeAttr(file.name)}">&times;</div><span class="media-preview-badge">Аудио</span><span class="media-preview-name">${escapeHtml(file.name.substring(0, 20))}</span>`;
         } else {
-            content = `${getFileIcon('DOCUMENT', file.name)}<div class="media-preview-remove" onclick="removeMediaPreview('${file.name}')">&times;</div><span class="media-preview-badge">Документ</span><span class="media-preview-name">${file.name.substring(0, 20)}</span>`;
+            content = `${getFileIcon('DOCUMENT', file.name)}<div class="media-preview-remove" data-filename="${escapeAttr(file.name)}">&times;</div><span class="media-preview-badge">Файл</span><span class="media-preview-name">${escapeHtml(file.name.substring(0, 20))}</span>`;
         }
 
         preview.innerHTML = content;
+        const removeBtn = preview.querySelector('.media-preview-remove');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => removeMediaPreview(file.name));
+        }
         document.getElementById('mediaPreviewList').appendChild(preview);
     };
     reader.readAsDataURL(file);
@@ -168,8 +211,10 @@ function addMediaToPreview(file) {
 
 function removeMediaPreview(filename) {
     pendingFiles = pendingFiles.filter(f => f.name !== filename);
-    const preview = document.querySelector(`.media-preview-item[data-filename="${filename}"]`);
-    if (preview) preview.remove();
+    const previews = document.querySelectorAll('.media-preview-item');
+    previews.forEach(p => {
+        if (p.getAttribute('data-filename') === filename) p.remove();
+    });
     if (pendingFiles.length === 0) {
         document.getElementById('mediaPreviewContainer').style.display = 'none';
     }
@@ -205,6 +250,10 @@ async function sendMessageWithMedia() {
                 width: m.width,
                 height: m.height
             }));
+        } else {
+            isUploading = false;
+            showNotification('Не удалось загрузить файлы', 'error');
+            return;
         }
         isUploading = false;
     }
@@ -226,6 +275,138 @@ async function sendMessageWithMedia() {
 function sendMessage() {
     sendMessageWithMedia();
 }
+
+// ============ Голосовые сообщения ============
+
+async function startVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showNotification('Запись голосовых не поддерживается в этом браузере', 'error');
+        return;
+    }
+
+    try {
+        voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+        showNotification('Нет доступа к микрофону', 'error');
+        return;
+    }
+
+    voiceChunks = [];
+    voiceCancelled = false;
+
+    let mimeType = 'audio/webm;codecs=opus';
+    if (!('MediaRecorder' in window) || !MediaRecorder.isTypeSupported(mimeType)) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+        else if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) mimeType = 'audio/ogg;codecs=opus';
+        else mimeType = '';
+    }
+
+    try {
+        mediaRecorder = mimeType ? new MediaRecorder(voiceStream, { mimeType }) : new MediaRecorder(voiceStream);
+    } catch (e) {
+        showNotification('Не удалось запустить запись', 'error');
+        stopVoiceStream();
+        return;
+    }
+
+    mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) voiceChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+        stopVoiceStream();
+        const durationSec = Math.round((Date.now() - voiceStartTime) / 1000);
+        hideVoiceRecorder();
+
+        if (voiceCancelled || voiceChunks.length === 0) return;
+        if (durationSec < 1) {
+            showNotification('Слишком короткая запись', 'error');
+            return;
+        }
+
+        const blob = new Blob(voiceChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        showNotification('Отправка голосового...', 'info');
+        const uploaded = await uploadVoice(blob, durationSec);
+        if (!uploaded) {
+            showNotification('Не удалось отправить голосовое', 'error');
+            return;
+        }
+
+        const mediaList = [{
+            tempId: uploaded.tempId,
+            filename: uploaded.filename,
+            originalName: uploaded.originalName,
+            mediaType: 'VOICE_MESSAGE',
+            orderNum: 0,
+            fileSize: uploaded.fileSize,
+            duration: durationSec
+        }];
+
+        if (stompClient && stompClient.connected) {
+            stompClient.send('/app/chat.send', {}, JSON.stringify({
+                chatId: chatId,
+                content: '',
+                replyToMessageId: replyToMessageId,
+                mediaList: mediaList
+            }));
+            cancelReply();
+        }
+    };
+
+    voiceStartTime = Date.now();
+    mediaRecorder.start();
+    showVoiceRecorder();
+    voiceTimerId = setInterval(updateVoiceTimer, 200);
+}
+
+function stopVoiceStream() {
+    if (voiceStream) {
+        voiceStream.getTracks().forEach(t => t.stop());
+        voiceStream = null;
+    }
+}
+
+function updateVoiceTimer() {
+    const elapsed = Math.floor((Date.now() - voiceStartTime) / 1000);
+    const el = document.getElementById('voiceRecorderTime');
+    if (el) el.textContent = formatDuration(elapsed);
+    if (elapsed >= 300) finishVoiceRecording();
+}
+
+function showVoiceRecorder() {
+    document.getElementById('voiceRecorderBar').style.display = 'flex';
+    document.getElementById('messageInput').style.display = 'none';
+    document.getElementById('voiceRecordBtn').classList.add('recording');
+}
+
+function hideVoiceRecorder() {
+    document.getElementById('voiceRecorderBar').style.display = 'none';
+    document.getElementById('messageInput').style.display = '';
+    document.getElementById('voiceRecordBtn').classList.remove('recording');
+    if (voiceTimerId) { clearInterval(voiceTimerId); voiceTimerId = null; }
+    const el = document.getElementById('voiceRecorderTime');
+    if (el) el.textContent = '00:00';
+}
+
+function finishVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        voiceCancelled = false;
+        mediaRecorder.stop();
+    }
+}
+
+function cancelVoiceRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        voiceCancelled = true;
+        mediaRecorder.stop();
+    } else {
+        hideVoiceRecorder();
+    }
+}
+
+// ============ end voice ============
 
 function deleteMessage(messageId) {
     if (!confirm('Удалить сообщение?')) return;
@@ -250,7 +431,7 @@ function editMessage(messageId, oldContent) {
 function replyToMessage(messageId, authorName, content) {
     replyToMessageId = messageId;
     const replyBar = document.getElementById('replyBar');
-    replyBar.querySelector('span').innerHTML = `<i class="bi bi-reply-fill me-1"></i> Ответ ${authorName}: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`;
+    replyBar.querySelector('span').innerHTML = `<i class="bi bi-reply-fill me-1"></i> Ответ ${escapeHtml(authorName)}: "${escapeHtml(content.substring(0, 50))}${content.length > 50 ? '...' : ''}"`;
     replyBar.style.display = 'flex';
     document.getElementById('messageInput').focus();
 }
@@ -323,9 +504,7 @@ function buildMediaHtml(mediaList) {
                     </div>`;
         } else if (media.mediaType === 'VIDEO') {
             return `<div class="media-item media-video" onclick="openMediaViewer(${idx})">
-                        <video src="${media.fileUrl}" preload="metadata">
-                            <source src="${media.fileUrl}">
-                        </video>
+                        <video src="${media.fileUrl}" preload="metadata" muted></video>
                         <div class="video-play-btn"><i class="bi bi-play-fill"></i></div>
                     </div>`;
         } else if (media.mediaType === 'AUDIO') {
@@ -333,30 +512,30 @@ function buildMediaHtml(mediaList) {
                         <i class="bi bi-music-note-beamed"></i>
                         <div class="audio-info">
                             <div class="audio-name">${escapeHtml(media.originalName || 'Аудио')}</div>
-                            <audio controls preload="none">
-                                <source src="${media.fileUrl}">
-                            </audio>
+                            <audio controls preload="none" src="${media.fileUrl}"></audio>
                         </div>
                     </div>`;
         } else if (media.mediaType === 'VOICE_MESSAGE') {
-            return `<div class="media-item media-voice">
+            const dur = media.duration || 0;
+            return `<div class="media-item media-voice" data-duration="${dur}">
                         <button class="voice-play-btn" onclick="toggleVoiceMessage(this, '${media.fileUrl}')">
                             <i class="bi bi-play-fill"></i>
                         </button>
-                        <div class="voice-wave"></div>
-                        <div class="voice-duration">${formatDuration(media.duration)}</div>
-                        <audio style="display: none;" preload="none">
-                            <source src="${media.fileUrl}">
-                        </audio>
+                        <div class="voice-wave">
+                            <div class="voice-wave-progress"></div>
+                        </div>
+                        <div class="voice-duration">${formatDuration(dur)}</div>
+                        <audio style="display: none;" preload="metadata" src="${media.fileUrl}"></audio>
                     </div>`;
         } else {
+            // DOCUMENT / OTHER — иконка + имя + размер + скачать
             return `<div class="media-item media-file">
                         ${getFileIcon(media.mediaType, media.originalName)}
                         <div class="file-info">
                             <div class="file-name">${escapeHtml(media.originalName || 'Файл')}</div>
                             <div class="file-size">${formatFileSize(media.fileSize)}</div>
                         </div>
-                        <a href="${media.fileUrl}" download="${escapeHtml(media.originalName || 'download')}" class="file-download">
+                        <a href="${media.fileUrl}" download="${escapeAttr(media.originalName || 'download')}" target="_blank" rel="noopener" class="file-download" title="Скачать">
                             <i class="bi bi-download"></i>
                         </a>
                     </div>`;
@@ -369,13 +548,13 @@ function openMediaViewer(startIndex) {
     if (!messageDiv) return;
 
     const mediaItems = messageDiv.querySelectorAll('.media-image, .media-video');
-    currentMediaList = Array.from(mediaItems).map((item, idx) => {
+    currentMediaList = Array.from(mediaItems).map(item => {
         if (item.classList.contains('media-image')) {
             const img = item.querySelector('img');
             return { type: 'image', src: img?.src, element: item };
         } else {
             const video = item.querySelector('video');
-            return { type: 'video', src: video?.querySelector('source')?.src || video?.src, element: item };
+            return { type: 'video', src: video?.src || video?.querySelector('source')?.src, element: item };
         }
     });
     currentMediaIndex = startIndex;
@@ -422,6 +601,9 @@ function toggleVoiceMessage(btn, url) {
     const container = btn.closest('.media-voice');
     const audio = container.querySelector('audio');
     const icon = btn.querySelector('i');
+    const progress = container.querySelector('.voice-wave-progress');
+    const durationEl = container.querySelector('.voice-duration');
+    const storedDuration = parseFloat(container.getAttribute('data-duration')) || 0;
 
     if (audio.paused) {
         document.querySelectorAll('.media-voice audio').forEach(a => {
@@ -430,12 +612,26 @@ function toggleVoiceMessage(btn, url) {
         document.querySelectorAll('.voice-play-btn i').forEach(i => {
             i.className = 'bi bi-play-fill';
         });
-        audio.src = url;
-        audio.play();
-        icon.className = 'bi bi-pause-fill';
+
+        if (!audio.src) audio.src = url;
+
+        audio.ontimeupdate = () => {
+            const total = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : storedDuration;
+            if (total > 0 && progress) {
+                progress.style.width = ((audio.currentTime / total) * 100) + '%';
+            }
+            if (durationEl) durationEl.textContent = formatDuration(audio.currentTime);
+        };
         audio.onended = () => {
             icon.className = 'bi bi-play-fill';
+            if (progress) progress.style.width = '0%';
+            if (durationEl) durationEl.textContent = formatDuration(storedDuration);
         };
+        audio.play().then(() => {
+            icon.className = 'bi bi-pause-fill';
+        }).catch(() => {
+            icon.className = 'bi bi-play-fill';
+        });
     } else {
         audio.pause();
         icon.className = 'bi bi-play-fill';
@@ -486,7 +682,7 @@ function buildMessageHtml(msg, isOutgoing) {
     }
 
     const authorLink = '<a href="/user/' + authorName + '" class="message-author-link" target="_blank">@' + authorName + '</a>';
-    const mediaHtml = buildMediaHtml(msg.mediaList);
+    const mediaHtml = isDeleted ? '' : buildMediaHtml(msg.mediaList);
 
     return '<div class="message ' + (isOutgoing ? 'outgoing' : 'incoming') + (isDeleted ? ' deleted' : '') + '" data-id="' + msg.id + '">' +
         (!isOutgoing ? '<div class="message-meta" style="margin-bottom: 2px;">' + authorLink + '</div>' : '') +
@@ -517,7 +713,7 @@ function showNotification(message, type) {
     alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
     alertDiv.innerHTML = `
         <i class="bi bi-${type === 'error' ? 'exclamation-triangle-fill' : 'info-circle-fill'} me-2"></i>
-        ${message}
+        ${escapeHtml(message)}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.body.appendChild(alertDiv);
@@ -583,12 +779,17 @@ function updateChatInList(chat) {
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) return '';
     return String(text)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(text) {
+    return escapeHtml(text);
 }
 
 function sendTyping(isTyping) {
@@ -620,7 +821,7 @@ function initAttachMenu() {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.multiple = true;
-    fileInput.accept = 'image/*,video/*,audio/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.java,.py,.js,.html,.css,.json,.xml,.md';
+    fileInput.accept = '*/*';
 
     fileInput.onchange = async function(e) {
         const files = Array.from(e.target.files);
@@ -663,7 +864,7 @@ function initAttachMenu() {
     });
 
     document.getElementById('attachDocumentBtn')?.addEventListener('click', () => {
-        fileInput.accept = '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt';
+        fileInput.accept = '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.md,.rtf,.odt,.ods,.odp';
         fileInput.click();
         attachMenu.style.display = 'none';
     });
@@ -814,6 +1015,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('cancelReplyBtn').addEventListener('click', cancelReply);
     document.getElementById('mediaPrevBtn')?.addEventListener('click', prevMedia);
     document.getElementById('mediaNextBtn')?.addEventListener('click', nextMedia);
+
+    document.getElementById('voiceRecordBtn')?.addEventListener('click', startVoiceRecording);
+    document.getElementById('voiceStopBtn')?.addEventListener('click', finishVoiceRecording);
+    document.getElementById('voiceCancelBtn')?.addEventListener('click', cancelVoiceRecording);
 
     initAttachMenu();
     initNewChatModal();
