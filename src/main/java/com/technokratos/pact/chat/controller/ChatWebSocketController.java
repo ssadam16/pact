@@ -76,7 +76,6 @@ public class ChatWebSocketController {
         deletePayload.put("content", "Сообщение удалено");
         deletePayload.put("status", "DELETED");
 
-        // Fix: was wrapped in Optional.of() which caused serialization issues
         messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(deletePayload));
     }
 
@@ -90,7 +89,6 @@ public class ChatWebSocketController {
         editPayload.put("action", "EDIT");
         editPayload.put("message", edited);
 
-        // Fix: was wrapped in Optional.of() which caused serialization issues
         messagingTemplate.convertAndSend("/topic/chat." + request.getChatId(), Optional.of(editPayload));
     }
 

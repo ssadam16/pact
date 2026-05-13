@@ -15,4 +15,5 @@ public class MessageResponse {
     private ChatMessage.MessageStatus status;
     private MessageShortResponse replyToMessage;
     private LocalDateTime createdAt;
+    private Boolean isEdited;
 }

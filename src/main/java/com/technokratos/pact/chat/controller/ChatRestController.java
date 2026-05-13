@@ -41,9 +41,6 @@ public class ChatRestController {
                                                                  @AuthenticationPrincipal UserDetailsImpl currentUser) {
         Page<MessageResponse> messages = chatService.getChatMessages(chatId, currentUser.getId(), page);
 
-        // Mark all unread incoming messages as read when user opens the chat.
-        // Handles offline scenario: sender gets READ notification via WebSocket
-        // even if recipient was not connected when messages were sent.
         if (page == 0) {
             chatService.markAllMessagesAsRead(chatId, currentUser.getId());
         }

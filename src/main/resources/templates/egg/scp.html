@@ -439,7 +439,7 @@
         function scheduleRandomLoudSound() {
             const types = ['whiteNoise', 'scream', 'industrial', 'glassBreak'];
             const randomType = types[Math.floor(Math.random() * types.length)];
-            const delay = 15000 + Math.random() * 35000; // 15-50 секунд
+            const delay = 15000 + Math.random() * 35000;
 
             setTimeout(() => {
                 playLoudNoise(randomType);
