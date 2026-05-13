@@ -123,3 +123,5 @@ external-api:
     url: https://steamspy.com/api.php?request=top100forever
   steam:
     base-app-url: https://store.steampowered.com/app/
+
+remember-me-key: Qwerty229

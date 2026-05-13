@@ -11,6 +11,76 @@
     gap: 0.5rem;
 }
 
+/* Аватарка в хедере */
+.avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: white;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.avatar-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Дропдаун кнопка в хедере */
+.navbar .dropdown-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.navbar .dropdown-toggle:hover {
+    background: transparent;
+    transform: none;
+    box-shadow: none;
+}
+
+.navbar .dropdown-toggle::after {
+    color: var(--text-secondary);
+}
+
+.dropdown-menu-dark {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.dropdown-menu-dark .dropdown-item {
+    color: var(--text-primary);
+    border-radius: 12px;
+    padding: 8px 16px;
+    transition: var(--transition-smooth);
+}
+
+.dropdown-menu-dark .dropdown-item:hover {
+    background: var(--bg-elevated);
+    color: var(--accent-purple);
+}
+
+.dropdown-menu-dark .dropdown-divider {
+    border-top-color: var(--border-subtle);
+}
+
+/* Кнопки для неавторизованного пользователя */
+.navbar .btn-outline-pact.btn-sm,
+.navbar .btn-solid-pact.btn-sm {
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+}
+
 .btn-outline-pact:hover {
     background: var(--accent-purple);
     color: white;

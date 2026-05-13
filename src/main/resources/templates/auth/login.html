@@ -46,7 +46,7 @@
 
                     <form th:action="@{/auth/login}" method="post">
                         <div class="mb-3">
-                            <label for="username" class="form-label small fw-semibold">Имя пользователя или Email</label>
+                            <label for="username" class="form-label small fw-semibold">Имя пользователя</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-transparent border-subtle">
                                     <i class="bi bi-person" style="color: var(--accent-purple);"></i>
@@ -55,8 +55,9 @@
                                        class="form-control bg-transparent border-subtle"
                                        id="username"
                                        name="username"
-                                       placeholder="username или email"
-                                       required autofocus>
+                                       placeholder="username"
+                                       required autofocus
+                                       autocomplete="username">
                             </div>
                         </div>
 
@@ -71,6 +72,7 @@
                                        id="password"
                                        name="password"
                                        placeholder="Ваш пароль"
+                                       autocomplete="current-password"
                                        required>
                                 <button class="btn btn-outline-secondary border-subtle" type="button" id="togglePassword">
                                     <i class="bi bi-eye"></i>
@@ -79,7 +81,7 @@
                         </div>
 
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input bg-transparent border-subtle" id="remember-me" name="remember-me">
+                            <input type="checkbox" class="form-check-input bg-transparent border-subtle" id="remember-me" name="remember-me" value="true">
                             <label class="form-check-label small text-secondary-custom" for="remember-me">
                                 Запомнить меня
                             </label>

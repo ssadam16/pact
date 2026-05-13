@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
   <meta charset="UTF-8">
 </head>
@@ -21,23 +21,42 @@
         <li class="nav-item"><a class="nav-link nav-link-custom" href="/servers">Сервера</a></li>
         <li class="nav-item"><a class="nav-link nav-link-custom" href="/marketplace">Маркетплейс</a></li>
       </ul>
-      <div class="d-flex gap-2" th:switch="${isAuthenticated}">
-        <div th:case="false">
-          <a href="/auth/login" class="btn-outline-pact btn-sm">Вход</a>
-          <a href="/auth/register" class="btn-solid-pact btn-sm">Присоединиться</a>
-        </div>
-        <div th:case="true">
-          <div class="dropdown">
-            <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <div class="avatar-placeholder" th:text="${#strings.substring(userName, 0, 1)}">U</div>
-              <span th:text="${userName}" class="text-white">User</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-dark">
-              <li><a class="dropdown-item" href="/profile"><i class="bi bi-person"></i> Профиль</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Выйти</a></li>
-            </ul>
-          </div>
+
+      <!-- Неавторизованный пользователь -->
+      <div th:if="!${#authorization.expression('isAuthenticated()')}" class="d-flex gap-2">
+        <a href="/auth/login" class="btn-outline-pact btn-sm">Вход</a>
+        <a href="/auth/register" class="btn-solid-pact btn-sm">Присоединиться</a>
+      </div>
+
+      <!-- Авторизованный пользователь -->
+      <div th:if="${#authorization.expression('isAuthenticated()')}" class="dropdown">
+        <div th:with="userInfo=${session.authenticatedUserSessionInfo}">
+          <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="avatar-placeholder">
+              <img th:if="${userInfo != null and userInfo.avatarUrl != null}"
+                   th:src="${userInfo.avatarUrl}"
+                   alt="Avatar"
+                   class="rounded-circle"
+                   width="32"
+                   height="32"
+                   style="object-fit: cover;">
+              <span th:if="${userInfo == null or userInfo.avatarUrl == null}"
+                    th:text="${userInfo != null ? #strings.substring(userInfo.username, 0, 1) : 'U'}">U</span>
+            </div>
+            <span th:text="${userInfo != null ? userInfo.username : 'User'}" class="text-white">User</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark">
+            <li><a class="dropdown-item" th:href="${userInfo != null ? '/user/' + userInfo.username : '/user/profile'}"><i class="bi bi-person"></i> Мой профиль</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form th:action="@{/auth/logout}" method="post" style="display: inline;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="dropdown-item" style="background: none; border: none; width: 100%; text-align: left;">
+                  <i class="bi bi-box-arrow-right"></i> Выйти
+                </button>
+              </form>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
