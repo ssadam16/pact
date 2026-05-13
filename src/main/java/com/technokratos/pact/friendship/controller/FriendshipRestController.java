@@ -4,11 +4,14 @@ import com.technokratos.pact.friendship.dto.FriendshipRequest;
 import com.technokratos.pact.friendship.model.Friendship;
 import com.technokratos.pact.friendship.service.FriendshipService;
 import com.technokratos.pact.security.model.UserDetailsImpl;
+import com.technokratos.pact.user.dto.UserShortProfileResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -44,5 +47,12 @@ public class FriendshipRestController {
 
         friendshipService.sendFriendshipRequest(currentUser.getId(), userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/api/friends")
+    @ResponseBody
+    public ResponseEntity<Set<UserShortProfileResponse>> getFriends(@AuthenticationPrincipal UserDetailsImpl currentUser) {
+        Set<UserShortProfileResponse> friends = friendshipService.getFriends(currentUser.getId());
+        return ResponseEntity.ok(friends);
     }
 }

@@ -2,20 +2,38 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Чаты в игровом сообществе Pact">
+  <meta name="theme-color" content="#0a0c10">
   <title>Чаты — Pact</title>
-  <link rel="stylesheet" href="/css/main.css">
-<!--  <link rel="stylesheet" href="/css/chat.css">-->
-</head>
-<body>
-<div class="chat-layout">
 
-  <!-- Sidebar -->
-  <aside class="chat-sidebar">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link th:href="@{/css/main.css}" rel="stylesheet">
+
+  <meta name="_csrf" th:content="${_csrf.token}">
+  <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<div th:replace="~{fragment/header :: header}"></div>
+
+<button class="chat-toggle-btn" id="chatToggleBtn">
+  <i class="bi bi-chat-dots-fill"></i>
+</button>
+
+<div class="chat-layout">
+  <aside class="chat-sidebar" id="chatSidebar">
     <div class="chat-sidebar-header">
       <h2>Чаты</h2>
+      <div class="chat-search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="chatSearchInput" placeholder="Поиск чатов...">
+      </div>
     </div>
-    <a href="/chat/new" class="new-chat-btn-sidebar">+ Новый чат</a>
+    <a href="#" class="new-chat-btn-sidebar" id="newChatBtn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+      <i class="bi bi-plus-lg me-1"></i> Новый чат
+    </a>
     <div class="chats-list" id="chatsList">
       <div class="chat-spinner">
         <div class="spinner-dot"></div>
@@ -25,21 +43,41 @@
     </div>
   </aside>
 
-  <!-- Welcome area -->
   <div class="chats-welcome">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
     <h2>Добро пожаловать!</h2>
     <p>Выберите чат слева или начните новый разговор</p>
-    <a href="/chat/new" class="btn-solid-pact" style="margin-top:8px; font-size:14px;">
+    <a href="#" class="btn-solid-pact" id="welcomeNewChatBtn" data-bs-toggle="modal" data-bs-target="#newChatModal">
       Начать чат
     </a>
   </div>
 </div>
 
+<div class="modal fade" id="newChatModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-chat-dots-fill me-2"></i>Новый чат</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="friendSearchInput" class="friend-search-input" placeholder="Поиск по имени пользователя...">
+        <div id="friendsListModal" class="friends-list">
+          <div class="text-center py-4 text-secondary-custom">
+            <i class="bi bi-people-fill fs-3"></i>
+            <p class="mt-2 mb-0">Загрузка списка друзей...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-<script src="/js/chats.js"></script>
+<script th:src="@{/js/chats.js}"></script>
 </body>
 </html>
