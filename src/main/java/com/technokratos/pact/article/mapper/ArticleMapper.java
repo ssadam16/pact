@@ -2,6 +2,7 @@ package com.technokratos.pact.article.mapper;
 
 import com.technokratos.pact.article.dto.ArticleCreateRequest;
 import com.technokratos.pact.article.dto.ArticleResponse;
+import com.technokratos.pact.article.dto.ArticleShortResponse;
 import com.technokratos.pact.article.model.Article;
 import com.technokratos.pact.game.mapper.GameMapper;
 import com.technokratos.pact.user.mapper.UserMapper;
@@ -15,4 +16,5 @@ public interface ArticleMapper {
     Article toArticle(ArticleCreateRequest request);
 
     ArticleResponse toArticleResponse(Article article);
+    ArticleShortResponse toArticleShortResponse(Article article);
 }

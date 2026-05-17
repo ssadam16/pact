@@ -35,20 +35,16 @@ public class Article extends BaseEntity {
     private User author;
 
     @ManyToMany
-    @JoinTable(
-            name = "article_game",
+    @JoinTable(name = "article_game",
             joinColumns = @JoinColumn(name = "article_id"),
-            inverseJoinColumns = @JoinColumn(name = "game_id")
-    )
+            inverseJoinColumns = @JoinColumn(name = "game_id"))
     @ToString.Exclude
     private Set<Game> games = new HashSet<>();
 
     @ManyToMany
-    @JoinTable(
-            name = "article_tag_article",
+    @JoinTable(name = "article_tag_article",
             joinColumns = @JoinColumn(name = "article_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @ToString.Exclude
     private Set<ArticleTag> tags = new HashSet<>();
 

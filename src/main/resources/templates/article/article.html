@@ -85,6 +85,19 @@
                     <div class="article-content" th:utext="${article.content}">
                         Содержание статьи
                     </div>
+
+                    <div class="article-footer mt-4 pt-3 border-top border-subtle">
+                        <div class="d-flex align-items-center gap-4">
+                            <button class="btn-like-article" id="likeBtn" th:data-liked="${article.liked}">
+                                <i th:class="${article.liked} ? 'bi bi-heart-fill' : 'bi bi-heart'"></i>
+                                <span id="likesCount" th:text="${article.likesCount}">0</span>
+                            </button>
+                            <button class="btn-comment-article" onclick="document.getElementById('commentInput').focus()">
+                                <i class="bi bi-chat-dots-fill"></i>
+                                <span id="commentsCountHeader" th:text="${article.commentsCount}">0</span>
+                            </button>
+                        </div>
+                    </div>
                 </article>
 
                 <div class="comments-section mt-4" id="commentsSection">
@@ -100,18 +113,7 @@
                         <div class="comment-form mb-4">
                             <div class="d-flex gap-3">
                                 <div class="flex-shrink-0">
-                                    <div class="comment-avatar-sm" style="display: none;">
-                                        <img th:if="${session.authenticatedUserSessionInfo.avatarUrl != null and session.authenticatedUserSessionInfo.avatarUrl != ''}"
-                                             th:src="@{${session.authenticatedUserSessionInfo.avatarUrl}}"
-                                             alt="Avatar"
-                                             class="rounded-circle"
-                                             width="48"
-                                             height="48"
-                                             style="object-fit: cover;">
-                                        <div th:unless="${session.authenticatedUserSessionInfo.avatarUrl != null and session.authenticatedUserSessionInfo.avatarUrl != ''}" class="friend-avatar-placeholder-sm">
-                                            <span th:text="${#strings.substring(session.authenticatedUserSessionInfo.username, 0, 1)}">U</span>
-                                        </div>
-                                    </div>
+                                    <div id="currentUserAvatar" class="comment-avatar-sm" style="display: none;"></div>
                                 </div>
                                 <div class="flex-grow-1">
                                     <textarea class="form-control bg-transparent border-subtle"
@@ -154,6 +156,9 @@
     window.articleId = /*[[${article.id}]]*/ null;
     window.currentUser = /*[[${#authentication != null && #authentication.name != 'anonymousUser'}]]*/ false;
     window.currentUsername = /*[[${#authentication != null && #authentication.name != 'anonymousUser'} ? ${#authentication.name} : null]]*/ null;
+    window.currentUserAvatar = /*[[${session.authenticatedUserSessionInfo != null ? session.authenticatedUserSessionInfo.avatarUrl : null}]]*/ null;
+    window.currentUserLetter = /*[[${session.authenticatedUserSessionInfo != null ? #strings.substring(session.authenticatedUserSessionInfo.username, 0, 1) : null}]]*/ null;
+    window.isLiked = /*[[${article.liked}]]*/ false;
 </script>
 <script th:src="@{/js/article.js}"></script>
 </body>
