@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,9 +26,9 @@ public class ArticleRestController {
     private final ArticleService articleService;
 
     @GetMapping//todo: popularity
-    public Page<ArticleShortResponse> findArticles(@RequestParam(required = false, defaultValue = "0") int page,
+    public ResponseEntity<List<ArticleShortResponse>> findArticles(@RequestParam(required = false, defaultValue = "0") int page,
                                                    @RequestParam(required = false, defaultValue = "20") int size,
-                                                   @RequestParam(required = false, defaultValue = "createAt") String sortBy,
+                                                   @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
                                                    @RequestParam(required = false, defaultValue = "desc")
                                                        @Pattern(regexp = "asc|desc",
                                                                message = "sortType must be 'asc' or 'desc'") String sortType,
@@ -36,7 +37,7 @@ public class ArticleRestController {
                                                    @RequestParam(required = false) Set<String> games,
                                                    @RequestParam(required = false) UUID authorId) {
 
-        return articleService.getArticlesByFilters(ArticleFilterRequest.builder()
+        return ResponseEntity.ok(articleService.getArticlesByFilters(ArticleFilterRequest.builder()
                 .page(page)
                 .size(size)
                 .sortBy(sortBy)
@@ -45,7 +46,7 @@ public class ArticleRestController {
                 .tags(tags)
                 .games(games)
                 .authorId(authorId)
-                .build()
+                .build())
         );
     }
 

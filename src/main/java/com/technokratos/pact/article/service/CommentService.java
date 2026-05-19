@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class CommentService {
     private final ArticleRepository articleRepository;
     private final AvatarService avatarService;
 
+    @Transactional
     public CommentResponse create(UUID authorId, CommentCreateRequest request) {
         User user = userRepository.findById(authorId)
                 .orElseThrow(() -> UserNotFoundException.byId(authorId));
@@ -46,6 +48,8 @@ public class CommentService {
                 .content(request.content())
                 .article(article)
                 .build();
+
+        articleRepository.addComment(request.articleId());
 
         log.info("Comment was created (userId={}, articleId={})", user.getId(), article.getId());
 

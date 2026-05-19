@@ -6,6 +6,7 @@ import com.technokratos.pact.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.HashSet;
@@ -40,6 +41,18 @@ public class Article extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "game_id"))
     @ToString.Exclude
     private Set<Game> games = new HashSet<>();
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private double logScore;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int likesCount;
+
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int commentsCount;
 
     @ManyToMany
     @JoinTable(name = "article_tag_article",

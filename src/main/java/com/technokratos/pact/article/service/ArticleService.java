@@ -33,9 +33,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -92,6 +95,7 @@ public class ArticleService {
         return articleResponse;
     }
 
+    @Transactional
     public ArticleResponse likeArticle(UUID articleId, UUID userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -105,11 +109,14 @@ public class ArticleService {
                 .article(article)
                 .build());
 
+        articleRepository.likeArticle(articleId);
+
         log.info("Article (ID={}) was liked by User (ID={})", articleId, userId);
 
         return getFullArticleResponse(article);
     }
 
+    @Transactional
     public ArticleResponse unlikeArticle(UUID articleId, UUID userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -122,6 +129,8 @@ public class ArticleService {
                 .user(user)
                 .article(article)
                 .build());
+
+        articleRepository.unlikeArticle(articleId);
 
         log.info("Article (ID={}) was unliked by User (ID={})", articleId, userId);
 
@@ -146,8 +155,6 @@ public class ArticleService {
             currentUserId = userDetails.getId();
         }
 
-        response.setCommentsCount(commentService.getCommentsCount(response.getId()));
-        response.setLikesCount(getLikesCount(response.getId()));
         response.setLiked(articleLikeRepository.existsByUserIdAndArticleId(currentUserId, article.getId()));
         response.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(article.getAuthor().getAvatarFilename()));
 
@@ -164,7 +171,7 @@ public class ArticleService {
         return response;
     }
 
-    public Page<ArticleShortResponse> getArticlesByFilters(ArticleFilterRequest filterRequest) {
+    public List<ArticleShortResponse> getArticlesByFilters(ArticleFilterRequest filterRequest) {
         log.info("Get article with filters: {}", filterRequest);
 
         Sort.Direction direction = Sort.Direction.fromString(filterRequest.sortType().toUpperCase());
@@ -181,6 +188,24 @@ public class ArticleService {
 
         Page<Article> articlePage = articleRepository.findAll(specification, pageable);
 
-        return articlePage.map(this::getFullArticleShortResponse);
+        List<Article> sortedList;
+        if (sortField.equals("logScore")) {
+            sortedList = articlePage.getContent().stream()
+                    .peek(a -> a.setLogScore(a.getLogScore() / getCountedTimeFormula(a)))
+                    .sorted((a1, a2) -> Double.compare(a2.getLogScore(), a1.getLogScore()))
+                    .toList();
+        } else {
+            sortedList = articlePage.getContent();
+        }
+
+        return sortedList.stream().map(this::getFullArticleShortResponse).collect(Collectors.toList());
+    }
+
+    private double getCountedTimeFormula(Article a) {
+        return Math.pow(((double) getAgeInHours(a) / 5 + 2), 1.8);
+    }
+
+    public long getAgeInHours(Article article) {
+        return Duration.between(article.getCreatedAt(), LocalDateTime.now()).toHours();
     }
 }
