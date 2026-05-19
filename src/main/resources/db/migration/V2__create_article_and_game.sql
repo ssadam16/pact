@@ -3,6 +3,9 @@ create table if not exists article (
     title varchar(255) not null,
     content text not null,
     author_id uuid not null references user_entity(id) on delete cascade,
+    likes_count int not null default 0,
+    comments_count int not null default 0,
+    log_score double precision not null default 0,
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp
 );
@@ -32,5 +35,11 @@ create table if not exists article_tag (
 create table if not exists article_tag_article (
     tag_id uuid not null references article_tag(id) on delete cascade,
     article_id uuid not null references article(id) on delete cascade,
-    primary key (tag_id,article_id)
+    primary key (tag_id, article_id)
+);
+
+create table if not exists article_like (
+    user_id uuid not null references user_entity(id) on delete cascade,
+    article_id uuid not null references article(id) on delete cascade,
+    primary key (user_id, article_id)
 );

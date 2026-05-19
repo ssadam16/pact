@@ -24,4 +24,6 @@ public class ArticleResponse{
         private LocalDateTime updatedAt;
         private Set<ArticleTagResponse> tags;
         private int commentsCount;
+        private int likesCount;
+        private boolean isLiked;
 }

@@ -1,6 +1,7 @@
 package com.technokratos.pact.article.controller;
 
 import com.technokratos.pact.article.dto.ArticleCreateRequest;
+import com.technokratos.pact.article.dto.ArticleFilterRequest;
 import com.technokratos.pact.article.service.ArticleService;
 import com.technokratos.pact.article.service.ArticleTagService;
 import com.technokratos.pact.game.service.GameService;
@@ -57,9 +58,24 @@ public class ArticleController {
     }
 
     @GetMapping("/{id}")
-    public String articlePage(@PathVariable UUID id, Model model) {
+    public String articlePage(@PathVariable UUID id, Model model, @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
-        model.addAttribute("article", articleService.getArticle(id));
+        model.addAttribute("article", articleService.getArticle(id, currentUser.getId()));
         return "article/article";
+    }
+
+    @GetMapping("/line")
+    public String articleLinePage(Model model) {
+        model.addAttribute("games", gameService.findAll());
+        model.addAttribute("tags", tagService.findAll());
+        model.addAttribute("articles", articleService.getArticlesByFilters(ArticleFilterRequest.builder()
+                .page(0)
+                .size(20)
+                .sortBy("createdAt")
+                .sortType("desc")
+                .build())
+        );
+
+        return "article/article-line";
     }
 }

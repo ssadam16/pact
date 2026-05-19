@@ -77,7 +77,8 @@ async function loadComments(reset = false) {
     if (reset) {
         currentPage = 0;
         hasMore = true;
-        document.getElementById('commentsList').innerHTML = '';
+        const commentsList = document.getElementById('commentsList');
+        if (commentsList) commentsList.innerHTML = '';
     }
     if (!hasMore && !reset) return;
 
@@ -99,19 +100,30 @@ async function loadComments(reset = false) {
             const commentsList = document.getElementById('commentsList');
             const noCommentsPlaceholder = document.getElementById('noCommentsPlaceholder');
             const commentsCountSpan = document.getElementById('commentsCount');
+            const commentsCountHeader = document.getElementById('commentsCountHeader');
+            const commentsCountFooter = document.getElementById('commentsCountFooter');
 
             if (commentsCountSpan) {
                 commentsCountSpan.textContent = totalElements;
             }
+            if (commentsCountHeader) {
+                commentsCountHeader.textContent = totalElements;
+            }
 
-            if (reset) {
+            if (commentsCountFooter) {
+                commentsCountFooter.textContent = totalElements;
+            }
+
+            if (reset && commentsList) {
                 commentsList.innerHTML = '';
             }
 
             if (comments.length === 0 && currentPage === 0) {
                 if (noCommentsPlaceholder) noCommentsPlaceholder.style.display = 'block';
-                commentsList.innerHTML = '';
-                commentsList.appendChild(noCommentsPlaceholder);
+                if (commentsList) {
+                    commentsList.innerHTML = '';
+                    commentsList.appendChild(noCommentsPlaceholder);
+                }
             } else {
                 if (noCommentsPlaceholder) noCommentsPlaceholder.style.display = 'none';
 
@@ -119,16 +131,17 @@ async function loadComments(reset = false) {
                     const commentHtml = renderComment(comment);
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = commentHtml;
-                    commentsList.appendChild(tempDiv.firstElementChild);
+                    if (commentsList) commentsList.appendChild(tempDiv.firstElementChild);
                 });
             }
 
             hasMore = !page.last;
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            if (loadMoreContainer) {
+                loadMoreContainer.style.display = hasMore ? 'block' : 'none';
+            }
             if (hasMore) {
                 currentPage++;
-                document.getElementById('loadMoreContainer').style.display = 'block';
-            } else {
-                document.getElementById('loadMoreContainer').style.display = 'none';
             }
         }
     } catch (error) {
@@ -194,6 +207,52 @@ async function submitComment() {
     }
 }
 
+async function toggleLike() {
+    if (!isAuthenticated) {
+        showNotification('Войдите в систему, чтобы поставить лайк', 'error');
+        return;
+    }
+
+    const likeBtn = document.getElementById('likeBtn');
+    const likesSpan = likeBtn.querySelector('span:not(.bi)');
+    const icon = likeBtn.querySelector('i');
+    const isLiked = likeBtn.getAttribute('data-liked') === 'true';
+    const url = isLiked ? `/articles/${articleId}/unlike` : `/articles/${articleId}/like`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [getCsrfHeader()]: getCsrfToken()
+            }
+        });
+
+        if (response.ok) {
+            const article = await response.json();
+
+            if (!isLiked) {
+                likeBtn.setAttribute('data-liked', 'true');
+                icon.classList.remove('bi-heart');
+                icon.classList.add('bi-heart-fill');
+                icon.style.color = '#ef4444';
+                likesSpan.textContent = article.likesCount;
+            } else {
+                likeBtn.setAttribute('data-liked', 'false');
+                icon.classList.remove('bi-heart-fill');
+                icon.classList.add('bi-heart');
+                icon.style.color = '';
+                likesSpan.textContent = article.likesCount;
+            }
+        } else {
+            showNotification('Ошибка при изменении лайка', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        showNotification('Ошибка соединения с сервером', 'error');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     articleId = window.articleId;
     isAuthenticated = window.currentUser === true;
@@ -234,11 +293,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         }
 
+        const likeBtn = document.getElementById('likeBtn');
+        if (likeBtn) {
+            likeBtn.addEventListener('click', toggleLike);
+        }
+
         if (isAuthenticated && window.currentUsername) {
             const currentUserAvatar = document.getElementById('currentUserAvatar');
             if (currentUserAvatar) {
                 currentUserAvatar.style.display = 'flex';
-                currentUserAvatar.innerHTML = `<span>${window.currentUsername.charAt(0).toUpperCase()}</span>`;
+                if (window.currentUserAvatar) {
+                    currentUserAvatar.innerHTML = `<img src="${window.currentUserAvatar}" alt="Avatar" class="rounded-circle" width="40" height="40" style="object-fit: cover;">`;
+                } else {
+                    currentUserAvatar.innerHTML = `<span>${window.currentUsername.charAt(0).toUpperCase()}</span>`;
+                }
             }
         }
     }

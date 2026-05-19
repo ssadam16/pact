@@ -14,6 +14,72 @@
     margin-bottom: 0;
 }
 
+.article-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+}
+
+.btn-like-article {
+    background: transparent;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.btn-like-article:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.btn-like-article.liked {
+    color: #ef4444;
+}
+
+.btn-like-article.liked i {
+    font-weight: bold;
+}
+
+.btn-comment-article {
+    background: transparent;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 40px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.btn-comment-article:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-purple);
+}
+
+.friend-avatar-placeholder-sm {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+}
+
 .article-author-avatar-sm {
     width: 40px;
     height: 40px;
