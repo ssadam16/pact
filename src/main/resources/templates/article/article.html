@@ -95,7 +95,7 @@
                             </button>
                             <button class="btn-comment-article" onclick="document.getElementById('commentInput').focus()">
                                 <i class="bi bi-chat-dots-fill"></i>
-                                <span th:text="${article.commentsCount}">0</span>
+                                <span id="commentsCountFooter" th:text="${article.commentsCount}">0</span>
                             </button>
                         </div>
                     </div>

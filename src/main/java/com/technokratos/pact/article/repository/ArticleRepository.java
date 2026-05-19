@@ -14,7 +14,7 @@ import java.util.UUID;
 public interface ArticleRepository extends JpaRepository<Article, UUID> {
     Page<Article> findAll(Specification<Article> spec, Pageable pageable);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE article SET " +
             "likes_count = likes_count + 1, " +
             "log_score = LOG10(1 + (likes_count + 1) + comments_count) " +
@@ -22,7 +22,7 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
             nativeQuery = true)
     void likeArticle(@Param("id") UUID id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE article SET " +
             "likes_count = likes_count - 1, " +
             "log_score = LOG10(1 + (likes_count - 1) + comments_count) " +

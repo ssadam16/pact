@@ -83,11 +83,11 @@ public class ArticleService {
         return saved.getId();
     }
 
-    public ArticleResponse getArticle(UUID articleId) {
+    public ArticleResponse getArticle(UUID articleId, UUID currentUserId) {
         Article article = articleRepository.findById(articleId)
                         .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
 
-        ArticleResponse articleResponse = getFullArticleResponse(article);
+        ArticleResponse articleResponse = getFullArticleResponse(article, currentUserId);
 
         log.info("Returning Article (ID={})", articleId);
         log.debug("Article's author's avatarUrl={}", articleResponse.getAuthor().getAvatarUrl());
@@ -111,9 +111,12 @@ public class ArticleService {
 
         articleRepository.likeArticle(articleId);
 
+        Article updatedArticle = articleRepository.findById(articleId)
+                .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
+
         log.info("Article (ID={}) was liked by User (ID={})", articleId, userId);
 
-        return getFullArticleResponse(article);
+        return getFullArticleResponse(updatedArticle, userId);
     }
 
     @Transactional
@@ -132,9 +135,12 @@ public class ArticleService {
 
         articleRepository.unlikeArticle(articleId);
 
+        Article updatedArticle = articleRepository.findById(articleId)
+                .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
+
         log.info("Article (ID={}) was unliked by User (ID={})", articleId, userId);
 
-        return getFullArticleResponse(article);
+        return getFullArticleResponse(updatedArticle, userId);
     }
 
     public int getLikesCount(UUID articleId) {
@@ -154,6 +160,15 @@ public class ArticleService {
         if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl userDetails) {
             currentUserId = userDetails.getId();
         }
+
+        response.setLiked(articleLikeRepository.existsByUserIdAndArticleId(currentUserId, article.getId()));
+        response.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(article.getAuthor().getAvatarFilename()));
+
+        return response;
+    }
+
+    private ArticleResponse getFullArticleResponse(Article article, UUID currentUserId) {
+        ArticleResponse response = articleMapper.toArticleResponse(article);
 
         response.setLiked(articleLikeRepository.existsByUserIdAndArticleId(currentUserId, article.getId()));
         response.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(article.getAuthor().getAvatarFilename()));

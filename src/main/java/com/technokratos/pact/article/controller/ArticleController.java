@@ -58,9 +58,9 @@ public class ArticleController {
     }
 
     @GetMapping("/{id}")
-    public String articlePage(@PathVariable UUID id, Model model) {
+    public String articlePage(@PathVariable UUID id, Model model, @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
-        model.addAttribute("article", articleService.getArticle(id));
+        model.addAttribute("article", articleService.getArticle(id, currentUser.getId()));
         return "article/article";
     }
 

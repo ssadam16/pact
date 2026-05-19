@@ -101,12 +101,17 @@ async function loadComments(reset = false) {
             const noCommentsPlaceholder = document.getElementById('noCommentsPlaceholder');
             const commentsCountSpan = document.getElementById('commentsCount');
             const commentsCountHeader = document.getElementById('commentsCountHeader');
+            const commentsCountFooter = document.getElementById('commentsCountFooter');
 
             if (commentsCountSpan) {
                 commentsCountSpan.textContent = totalElements;
             }
             if (commentsCountHeader) {
                 commentsCountHeader.textContent = totalElements;
+            }
+
+            if (commentsCountFooter) {
+                commentsCountFooter.textContent = totalElements;
             }
 
             if (reset && commentsList) {
@@ -232,14 +237,12 @@ async function toggleLike() {
                 icon.classList.add('bi-heart-fill');
                 icon.style.color = '#ef4444';
                 likesSpan.textContent = article.likesCount;
-                showNotification('Лайк поставлен', 'success');
             } else {
                 likeBtn.setAttribute('data-liked', 'false');
                 icon.classList.remove('bi-heart-fill');
                 icon.classList.add('bi-heart');
                 icon.style.color = '';
                 likesSpan.textContent = article.likesCount;
-                showNotification('Лайк убран', 'info');
             }
         } else {
             showNotification('Ошибка при изменении лайка', 'error');
