@@ -379,15 +379,22 @@ function showVoiceRecorder() {
     document.getElementById('voiceRecorderBar').style.display = 'flex';
     document.getElementById('messageInput').style.display = 'none';
     document.getElementById('voiceRecordBtn').classList.add('recording');
+
+    const sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) sendBtn.style.display = 'none';
 }
 
 function hideVoiceRecorder() {
     document.getElementById('voiceRecorderBar').style.display = 'none';
     document.getElementById('messageInput').style.display = '';
     document.getElementById('voiceRecordBtn').classList.remove('recording');
+
     if (voiceTimerId) { clearInterval(voiceTimerId); voiceTimerId = null; }
     const el = document.getElementById('voiceRecorderTime');
     if (el) el.textContent = '00:00';
+
+    const sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) sendBtn.style.display = '';
 }
 
 function finishVoiceRecording() {
