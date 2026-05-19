@@ -30,7 +30,7 @@ async function searchUserByUsername(username) {
     }
 
     try {
-        const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
+        const response = await fetch(`/api/friendships/search/${encodeURIComponent(username)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -41,13 +41,24 @@ async function searchUserByUsername(username) {
         if (response.ok) {
             const user = await response.json();
             displaySearchResult(user);
+        } else if (response.status === 204) {
+            displayMessage('Пользователь уже в друзьях или запрос отправлен');
         } else if (response.status === 404) {
+            displayNoResults();
+        } else {
             displayNoResults();
         }
     } catch (error) {
         console.error('Search error:', error);
         displayNoResults();
     }
+}
+
+function displayMessage(message) {
+    const resultsContainer = document.getElementById('searchResultsList');
+    const resultsWrapper = document.getElementById('searchResults');
+    resultsContainer.innerHTML = `<div class="text-center py-3 text-secondary-custom small">${message}</div>`;
+    resultsWrapper.style.display = 'block';
 }
 
 function displaySearchResult(user) {

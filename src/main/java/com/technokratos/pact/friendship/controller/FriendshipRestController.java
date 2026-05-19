@@ -55,4 +55,17 @@ public class FriendshipRestController {
         Set<UserShortProfileResponse> friends = friendshipService.getFriends(currentUser.getId());
         return ResponseEntity.ok(friends);
     }
+
+    @GetMapping("/search/{username}")
+    public ResponseEntity<UserShortProfileResponse> search(@AuthenticationPrincipal UserDetailsImpl currentUser,
+                                                           @PathVariable String username) {
+
+        UserShortProfileResponse profile = friendshipService.search(currentUser.getId(), username);
+
+        if (profile == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(profile);
+    }
 }
