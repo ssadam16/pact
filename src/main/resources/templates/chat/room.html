@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Чат — Pact</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link th:href="@{/css/main.css}" rel="stylesheet">
+
+  <meta name="_csrf" th:content="${_csrf.token}">
+  <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<div th:replace="~{fragment/header :: header}"></div>
+
+<button class="chat-toggle-btn" id="chatToggleBtn">
+  <i class="bi bi-chat-dots-fill"></i>
+</button>
+
+<div class="chat-layout">
+  <aside class="chat-sidebar" id="chatSidebar">
+    <div class="chat-sidebar-header">
+      <h2>Чаты</h2>
+      <div class="chat-search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="chatSearchInput" placeholder="Поиск чатов...">
+      </div>
+    </div>
+    <a href="#" class="new-chat-btn-sidebar" id="newChatBtn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+      <i class="bi bi-plus-lg me-1"></i> Новый чат
+    </a>
+    <div class="chats-list" id="chatsList">
+      <div class="chat-spinner">
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+        <div class="spinner-dot"></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="chat-main">
+    <div class="chat-topbar">
+      <div class="chat-topbar-avatar" id="chatTopbarAvatar">?</div>
+      <div class="chat-topbar-info">
+        <div class="chat-topbar-name" id="chatTopbarName">...</div>
+        <div class="chat-topbar-status" id="chatTopbarStatus"></div>
+      </div>
+    </div>
+
+    <div class="messages-area chat-bg-pattern" id="messagesArea"></div>
+
+    <div class="typing-indicator" id="typingIndicator"></div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <div id="replyBar" class="chat-reply-bar" style="display: none;">
+          <span><i class="bi bi-reply-fill me-1"></i> Ответ на сообщение</span>
+          <button id="cancelReplyBtn"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div id="mediaPreviewContainer" class="media-preview-container" style="display: none;">
+          <div id="mediaPreviewList" class="media-preview-list"></div>
+        </div>
+        <div id="voiceRecorderBar" class="voice-recorder-bar" style="display: none;">
+          <button id="voiceCancelBtn" class="voice-recorder-btn voice-cancel" title="Отменить">
+            <i class="bi bi-trash-fill"></i>
+          </button>
+          <div class="voice-recorder-indicator">
+            <span class="voice-recorder-dot"></span>
+            <span class="voice-recorder-time" id="voiceRecorderTime">00:00</span>
+          </div>
+          <div class="voice-recorder-hint">Идёт запись...</div>
+          <button id="voiceStopBtn" class="voice-recorder-btn voice-stop" title="Отправить">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+        <textarea class="chat-text-input" id="messageInput" rows="1"
+                  placeholder="Написать сообщение..." autocomplete="off"></textarea>
+      </div>
+      <div class="chat-actions">
+        <button class="chat-attach-btn" id="attachBtn" title="Прикрепить">
+          <i class="bi bi-paperclip"></i>
+        </button>
+        <div id="attachMenu" class="attach-menu" style="display: none;">
+          <button id="attachPhotoBtn"><i class="bi bi-image-fill"></i> Фото</button>
+          <button id="attachVideoBtn"><i class="bi bi-camera-reels-fill"></i> Видео</button>
+          <button id="attachAudioBtn"><i class="bi bi-music-note-beamed"></i> Аудио</button>
+          <button id="attachDocumentBtn"><i class="bi bi-file-earmark-fill"></i> Документ</button>
+          <button id="attachOtherBtn"><i class="bi bi-file-earmark-fill"></i> Файл</button>
+        </div>
+        <button class="chat-attach-btn" id="voiceRecordBtn" title="Записать голосовое сообщение">
+          <i class="bi bi-mic-fill"></i>
+        </button>
+        <button class="chat-send-btn" id="sendBtn" title="Отправить">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal fade" id="mediaViewerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content media-viewer-content">
+      <div class="modal-header border-0 pb-0">
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center" id="mediaViewerBody">
+        <div id="mediaViewerContent"></div>
+        <div class="media-viewer-nav" id="mediaViewerNav" style="display: none;">
+          <button id="mediaPrevBtn"><i class="bi bi-chevron-left"></i></button>
+          <span id="mediaCounter"></span>
+          <button id="mediaNextBtn"><i class="bi bi-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="newChatModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-chat-dots-fill me-2"></i>Новый чат</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="friendSearchInput" class="friend-search-input" placeholder="Поиск по имени пользователя...">
+        <div id="friendsListModal" class="friends-list">
+          <div class="text-center py-4 text-secondary-custom">
+            <i class="bi bi-people-fill fs-3"></i>
+            <p class="mt-2 mb-0">Загрузка списка друзей...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script th:inline="javascript">
+  window.__CHAT_ID__ = [[${chatId}]];
+  window.__CURRENT_USERNAME__ = [[${username}]];
+</script>
+<script th:src="@{/js/room.js}"></script>
+</body>
+</html>

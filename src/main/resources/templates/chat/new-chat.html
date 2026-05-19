@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Новый чат — Pact</title>
+  <link rel="stylesheet" href="/css/main.css">
+<!--  <link rel="stylesheet" href="/css/chat.css">-->
+</head>
+<body>
+<div class="new-chat-wrapper">
+  <div class="new-chat-card">
+    <h1>Новый чат</h1>
+
+    <div class="new-chat-input-group">
+      <input type="text" id="usernameInput" placeholder="Введите username..." autocomplete="off">
+      <button id="searchBtn">Найти</button>
+    </div>
+
+    <div id="userResult" class="user-result-card">
+      <div id="userResultInfo"></div>
+      <button class="start-chat-btn" id="startChatBtn">Начать чат</button>
+    </div>
+
+    <div class="new-chat-error" id="errorMessage"></div>
+
+    <a href="/chat/list" class="new-chat-back">← Назад к чатам</a>
+  </div>
+</div>
+
+<script src="/js/new-chat.js"></script>
+</body>
+</html>

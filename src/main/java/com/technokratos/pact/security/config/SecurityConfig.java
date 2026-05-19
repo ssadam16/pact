@@ -6,7 +6,9 @@ import com.technokratos.pact.auth.oauth2.CustomOAuth2UserService;
 import com.technokratos.pact.auth.oauth2.HttpCookieOAuth2RequestRepository;
 import com.technokratos.pact.auth.oauth2.handler.OAuth2FailureHandler;
 import com.technokratos.pact.auth.oauth2.handler.OAuth2SuccessHandler;
+import com.technokratos.pact.security.service.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,11 +18,17 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import javax.sql.DataSource;
 import java.util.Arrays;
 import java.util.List;
 
@@ -36,13 +44,18 @@ public class SecurityConfig {
     private final OAuth2FailureHandler oAuth2FailureHandler;
     private final HttpCookieOAuth2RequestRepository cookieOAuth2RequestRepository;
 
+    private final UserDetailsServiceImpl userDetailsService;
+
+    @Value("${remember-me-key}")
+    private String rememberMeKey;
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RememberMeServices rememberMeServices) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/auth/**", "/oauth2/**")
+                        .ignoringRequestMatchers("/auth/**", "/oauth2/**", "/api/**", "/ws/**", "/auth/logout")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
 
@@ -88,13 +101,17 @@ public class SecurityConfig {
 //                        .failureHandler(oAuth2FailureHandler)
 //                )
 
+                .rememberMe(remember -> remember
+                        .rememberMeServices(rememberMeServices)
+                )
+
                 .logout(logout -> logout
                         .logoutUrl("/auth/logout")
-                        .logoutSuccessUrl("/")
+                        .logoutSuccessUrl("/auth/login?logout")
                         .permitAll()
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("JSESSIONID", "pact_remember_me")
                 );
 
         return http.build();
@@ -137,6 +154,27 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
+        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setDataSource(dataSource);
+
+        return tokenRepository;
+    }
+
+    @Bean
+    public RememberMeServices rememberMeServices(PersistentTokenRepository tokenRepository) {
+        PersistentTokenBasedRememberMeServices services =
+                new PersistentTokenBasedRememberMeServices(rememberMeKey, userDetailsService, tokenRepository);
+
+        services.setParameter("remember-me");
+        services.setCookieName("pact_remember_me");
+        services.setTokenValiditySeconds(604800);
+        services.setAlwaysRemember(false);
+        services.setUseSecureCookie(false); //todo: поставить true, если настрою https!
+
+        return services;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

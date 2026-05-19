@@ -50,6 +50,7 @@
                                th:field="*{username}"
                                th:errorclass="is-invalid"
                                placeholder="username"
+                               autocomplete="username"
                                required>
                     </div>
                     <div th:if="${#fields.hasErrors('username')}"
@@ -73,6 +74,7 @@
                                th:field="*{name}"
                                th:errorclass="is-invalid"
                                placeholder="Как вас называть?"
+                               autocomplete="name"
                                required>
                     </div>
                     <div th:if="${#fields.hasErrors('name')}"
@@ -93,6 +95,7 @@
                                th:field="*{email}"
                                th:errorclass="is-invalid"
                                placeholder="your@email.com"
+                               autocomplete="email"
                                required>
                     </div>
                     <div th:if="${#fields.hasErrors('email')}"
@@ -113,6 +116,7 @@
                                th:field="*{password}"
                                th:errorclass="is-invalid"
                                placeholder="Минимум 6 символов"
+                               autocomplete="new-password"
                                required>
                         <button class="btn btn-outline-secondary border-subtle password-toggle" type="button" id="togglePassword">
                             <i class="bi bi-eye"></i>

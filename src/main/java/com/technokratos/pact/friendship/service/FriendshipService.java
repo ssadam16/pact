@@ -94,4 +94,31 @@ public class FriendshipService {
 
         log.info("Friendship between user1 (ID={}) and user2 (ID={}) is deleted", userId1, userId2);
     }
+
+    public UserShortProfileResponse search(UUID currentUserId, String username) {
+        userRepository.findById(currentUserId)
+                .orElseThrow(() -> UserNotFoundException.byId(currentUserId));
+
+        User potential = userRepository.findByUsername(username)
+                .orElseThrow(() -> UserNotFoundException.byUsername(username));
+
+        Optional<Friendship> friendshipOptional = friendshipRepository.findFriendshipBetweenUsers(currentUserId, potential.getId());
+
+        if (currentUserId.equals(potential.getId())) {
+            return null;
+        }
+
+        if (friendshipOptional.isPresent()) {
+            Friendship friendship = friendshipOptional.get();
+
+            if (friendship.getStatus() == Friendship.FriendshipStatus.ACCEPTED) {
+                return null;
+            } else if (friendship.getStatus() == Friendship.FriendshipStatus.PENDING) {
+                return null;
+            } else if (friendship.getStatus() == Friendship.FriendshipStatus.REJECTED) {
+                friendshipRepository.delete(friendship);
+            }
+        }
+        return userService.getShortProfile(username);
+    }
 }

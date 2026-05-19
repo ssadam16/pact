@@ -68,8 +68,8 @@ public class UserSessionInterceptor implements HandlerInterceptor {
                             .orElseThrow(() -> UserNotFoundException.byUsername(username));
 
             AuthenticatedUserSessionInfo info = new AuthenticatedUserSessionInfo(
-                    user.getUsername(),
                     user.getEmail(),
+                    user.getUsername(),
                     avatarService.getAvatarUrl(user.getAvatarFilename())
             );
 

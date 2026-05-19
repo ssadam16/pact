@@ -45,6 +45,7 @@ public class MinioService {
     public static class Folders {
         public static final String AVATARS = "avatars";
         public static final String ARTICLES = "articles";
+        public static final String CHAT_MEDIA = "chat-media";
     }
 
     @PostConstruct
@@ -97,7 +98,24 @@ public class MinioService {
 
     public FileInfo uploadFile(MultipartFile file, String folder) {
         validateFile(file);
-        
+        return doUpload(file, folder);
+    }
+
+    /**
+     * Загрузка медиа в чат: без жёсткой проверки расширений и без 10MB-лимита,
+     * так как валидация (тип/размер до 50MB) выполняется в ChatMediaService.
+     */
+    public FileInfo uploadChatFile(MultipartFile file, String folder) {
+        if (file.isEmpty()) {
+            throw new FileValidationException("File is empty");
+        }
+        if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
+            throw new FileValidationException("File name not specified");
+        }
+        return doUpload(file, folder);
+    }
+
+    private FileInfo doUpload(MultipartFile file, String folder) {
         String originalFilename = file.getOriginalFilename();
         String extension = FilenameUtils.getExtension(originalFilename);
         String uniqueFilename = generateUniqueFilename(originalFilename);
@@ -143,6 +161,25 @@ public class MinioService {
         } catch (Exception e) {
             log.error("Error while getting URL for file '{}': {}", filePath, e.getMessage());
             return null;
+        }
+    }
+
+    public void copyObject(String sourcePath, String destPath) {
+        try {
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(destPath)
+                            .source(CopySource.builder()
+                                    .bucket(bucket)
+                                    .object(sourcePath)
+                                    .build())
+                            .build()
+            );
+            log.info("File copied from '{}' to '{}'", sourcePath, destPath);
+        } catch (Exception e) {
+            log.error("Error while copying file: {}", e.getMessage());
+            throw new FileUploadException("Cannot copy file", e);
         }
     }
 
@@ -227,7 +264,7 @@ public class MinioService {
     private String generateUniqueFilename(String originalFilename) {
         String extension = FilenameUtils.getExtension(originalFilename);
         String baseName = FilenameUtils.getBaseName(originalFilename);
-        
+
         baseName = transliterate(baseName);
         baseName = baseName.replaceAll("[^a-zA-Z0-9-_]", "");
 
