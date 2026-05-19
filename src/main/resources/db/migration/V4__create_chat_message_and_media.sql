@@ -42,4 +42,4 @@ create table if not exists chat_read_receipt (
     read_at timestamp,
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp
-)
+);
