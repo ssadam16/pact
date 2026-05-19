@@ -3,7 +3,6 @@ let isLoading = false;
 let hasMore = true;
 let articleId = null;
 let isAuthenticated = false;
-let currentUserLiked = false;
 
 function getCsrfToken() {
     return document.querySelector('meta[name="_csrf"]')?.content;
@@ -210,9 +209,8 @@ async function toggleLike() {
     }
 
     const likeBtn = document.getElementById('likeBtn');
-    const likesSpan = document.getElementById('likesCount');
+    const likesSpan = likeBtn.querySelector('span:not(.bi)');
     const icon = likeBtn.querySelector('i');
-
     const isLiked = likeBtn.getAttribute('data-liked') === 'true';
     const url = isLiked ? `/articles/${articleId}/unlike` : `/articles/${articleId}/like`;
 
@@ -232,16 +230,16 @@ async function toggleLike() {
                 likeBtn.setAttribute('data-liked', 'true');
                 icon.classList.remove('bi-heart');
                 icon.classList.add('bi-heart-fill');
-                likeBtn.classList.add('liked');
+                icon.style.color = '#ef4444';
                 likesSpan.textContent = article.likesCount;
-                currentUserLiked = true;
+                showNotification('Лайк поставлен', 'success');
             } else {
                 likeBtn.setAttribute('data-liked', 'false');
                 icon.classList.remove('bi-heart-fill');
                 icon.classList.add('bi-heart');
-                likeBtn.classList.remove('liked');
+                icon.style.color = '';
                 likesSpan.textContent = article.likesCount;
-                currentUserLiked = false;
+                showNotification('Лайк убран', 'info');
             }
         } else {
             showNotification('Ошибка при изменении лайка', 'error');
@@ -255,7 +253,6 @@ async function toggleLike() {
 document.addEventListener('DOMContentLoaded', async function() {
     articleId = window.articleId;
     isAuthenticated = window.currentUser === true;
-    currentUserLiked = window.isLiked === true;
 
     const images = document.querySelectorAll('.article-content img');
     images.forEach(img => {
@@ -295,10 +292,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const likeBtn = document.getElementById('likeBtn');
         if (likeBtn) {
-            if (currentUserLiked) {
-                likeBtn.setAttribute('data-liked', 'true');
-                likeBtn.classList.add('liked');
-            }
             likeBtn.addEventListener('click', toggleLike);
         }
 
