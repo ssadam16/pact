@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Редактирование профиля в игровом сообществе Pact">
+    <meta name="theme-color" content="#0a0c10">
+    <title th:text="'Редактирование — ' + ${profile.username} + ' — Pact'">Редактирование профиля — Pact</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link th:href="@{/css/main.css}" rel="stylesheet">
+    <link th:href="@{/css/profile.css}" rel="stylesheet">
+
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<div th:replace="~{fragment/header :: header}"></div>
+
+<main class="flex-grow-1 profile-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+
+                <div class="mb-4">
+                    <a th:href="@{/user/{username}(username=${profile.username})}" class="text-decoration-none text-secondary-custom hover-lift d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Назад к профилю</span>
+                    </a>
+                </div>
+
+                <div class="card-glass p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <div class="hexagon" style="width: 100px; height: 115px; margin: 0 auto;">
+                            <div class="hexagon-inner">
+                                <img th:if="${profile.avatarUrl != null}"
+                                     th:src="@{${profile.avatarUrl}}"
+                                     alt="Avatar"
+                                     class="hexagon-avatar">
+                                <div th:unless="${profile.avatarUrl != null}" class="hexagon-placeholder" style="font-size: 2rem;">
+                                    <span th:text="${#strings.substring(profile.name, 0, 1)}">U</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn-outline-pact-sm" data-bs-toggle="modal" data-bs-target="#avatarModal">
+                                <i class="bi bi-camera-fill"></i> Сменить фото
+                            </button>
+                            <button type="button" class="btn-outline-pact-sm text-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteAvatarModal"
+                                    th:if="${profile.avatarUrl != null}">
+                                <i class="bi bi-trash-fill"></i> Удалить фото
+                            </button>
+                        </div>
+                    </div>
+
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <span th:text="${success}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form th:action="@{/user/{username}/edit(username=${profile.username})}" th:object="${editRequest}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-semibold">
+                                <i class="bi bi-person-fill me-1" style="color: var(--accent-purple);"></i>
+                                Отображаемое имя
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent border-subtle"
+                                   id="name"
+                                   name="name"
+                                   th:field="*{name}"
+                                   th:errorclass="is-invalid"
+                                   required>
+                            <div th:if="${#fields.hasErrors('name')}"
+                                 th:errors="*{name}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person-badge me-1" style="color: var(--accent-purple);"></i>
+                                Имя пользователя
+                            </label>
+                            <input type="text"
+                                   class="form-control bg-transparent border-subtle"
+                                   th:value="${profile.username}"
+                                   disabled>
+                            <div class="form-text text-secondary-custom small">Имя пользователя нельзя изменить</div>
+                        </div>
+
+                        <hr class="border-subtle my-4">
+
+                        <h5 class="mb-3">
+                            <i class="bi bi-shield-lock-fill me-2" style="color: var(--accent-purple);"></i>
+                            Смена пароля
+                        </h5>
+                        <p class="text-secondary-custom small mb-3">Заполните только если хотите изменить пароль</p>
+
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label fw-semibold">
+                                <i class="bi bi-key-fill me-1" style="color: var(--accent-purple);"></i>
+                                Текущий пароль
+                            </label>
+                            <div class="input-group">
+                                <input type="password"
+                                       class="form-control bg-transparent border-subtle"
+                                       id="currentPassword"
+                                       name="currentPassword"
+                                       th:field="*{currentPassword}"
+                                       th:errorclass="is-invalid"
+                                       placeholder="Введите текущий пароль (только если меняете пароль)">
+                                <button class="btn btn-outline-secondary border-subtle password-toggle" type="button">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div th:if="${#fields.hasErrors('currentPassword')}"
+                                 th:errors="*{currentPassword}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="color: var(--accent-purple);"></i>
+                                Новый пароль
+                            </label>
+                            <div class="input-group">
+                                <input type="password"
+                                       class="form-control bg-transparent border-subtle"
+                                       id="newPassword"
+                                       name="newPassword"
+                                       th:field="*{newPassword}"
+                                       th:errorclass="is-invalid"
+                                       placeholder="Минимум 6 символов (оставьте пустым, чтобы не менять)">
+                                <button class="btn btn-outline-secondary border-subtle password-toggle" type="button">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div th:if="${#fields.hasErrors('newPassword')}"
+                                 th:errors="*{newPassword}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirmPassword" class="form-label fw-semibold">
+                                <i class="bi bi-lock-fill me-1" style="color: var(--accent-purple);"></i>
+                                Подтверждение пароля
+                            </label>
+                            <div class="input-group">
+                                <input type="password"
+                                       class="form-control bg-transparent border-subtle"
+                                       id="confirmPassword"
+                                       name="confirmPassword"
+                                       th:field="*{confirmPassword}"
+                                       th:errorclass="is-invalid"
+                                       placeholder="Повторите новый пароль">
+                                <button class="btn btn-outline-secondary border-subtle password-toggle" type="button">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div th:if="${#fields.hasErrors('confirmPassword')}"
+                                 th:errors="*{confirmPassword}"
+                                 class="invalid-feedback d-block small mt-1"></div>
+                        </div>
+
+                        <div class="d-flex gap-3 justify-content-end">
+                            <a th:href="@{/user/{username}(username=${profile.username})}" class="btn-outline-pact">
+                                <i class="bi bi-x-lg"></i> Отмена
+                            </a>
+                            <button type="submit" class="btn-solid-pact">
+                                <i class="bi bi-check-lg"></i> Сохранить
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragment/footer :: footer}"></div>
+
+<!-- Модальное окно загрузки аватарки -->
+<div class="modal fade avatar-modal" id="avatarModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Фото профиля</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/user/avatar/upload}" method="post" enctype="multipart/form-data" id="avatarForm">
+                <div class="modal-body text-center">
+                    <div class="hexagon-preview" style="width: 120px; height: 138px;">
+                        <div class="hexagon-preview-inner">
+                            <img th:if="${profile.avatarUrl != null}"
+                                 th:src="@{${profile.avatarUrl}}"
+                                 alt="Current avatar"
+                                 id="avatarPreview"
+                                 class="hexagon-preview-img">
+                            <div th:unless="${profile.avatarUrl != null}"
+                                 class="hexagon-preview-placeholder"
+                                 id="avatarPreviewPlaceholder" style="font-size: 2rem;">
+                                <span th:text="${#strings.substring(profile.name, 0, 1)}">U</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="avatarInput" class="form-label fw-semibold">Выберите новое фото</label>
+                        <input type="file"
+                               class="form-control"
+                               id="avatarInput"
+                               name="image"
+                               accept="image/jpeg,image/png,image/gif,image/webp"
+                               required>
+                        <div class="form-text text-secondary-custom small mt-2">
+                            <i class="bi bi-info-circle-fill"></i>
+                            Поддерживаются форматы: JPG, PNG, GIF, WEBP. Максимальный размер: 5MB
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-outline-pact-sm" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn-solid-pact-sm" id="uploadAvatarBtn">
+                        <i class="bi bi-cloud-upload-fill"></i> Загрузить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно удаления аватарки -->
+<div class="modal fade avatar-modal" id="deleteAvatarModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Удалить фото профиля</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="hexagon-preview" style="width: 120px; height: 138px; margin-bottom: 1.5rem;">
+                    <div class="hexagon-preview-inner">
+                        <img th:if="${profile.avatarUrl != null}"
+                             th:src="@{${profile.avatarUrl}}"
+                             alt="Avatar"
+                             class="hexagon-preview-img">
+                        <div th:unless="${profile.avatarUrl != null}" class="hexagon-preview-placeholder" style="font-size: 2rem;">
+                            <span th:text="${#strings.substring(profile.name, 0, 1)}">U</span>
+                        </div>
+                    </div>
+                </div>
+                <i class="bi bi-exclamation-triangle-fill fs-1" style="color: #f87171;"></i>
+                <p class="mt-3 mb-0 fw-semibold">Вы уверены, что хотите удалить свое фото профиля?</p>
+                <p class="text-secondary-custom small mt-1">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-outline-pact-sm" data-bs-dismiss="modal">Отмена</button>
+                <form th:action="@{/user/avatar/delete}" method="post" style="display: inline;">
+                    <button type="submit" class="btn-solid-pact-sm" style="background: #dc3545;">
+                        <i class="bi bi-trash-fill"></i> Удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/profile-edit.js}"></script>
+</body>
+</html>

@@ -35,7 +35,8 @@ public class AvatarService {
     }
 
     @Transactional
-    public void deleteAvatar(UUID userId) {
+    @Deprecated
+    public void deleteUserAvatar(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> UserNotFoundException.byId(userId));
 
@@ -57,6 +58,21 @@ public class AvatarService {
                 log.warn("Failed to delete old image for user {}: {}",
                         user.getId(), e.getMessage());
             }
+        }
+    }
+
+    public void deleteAvatar(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> UserNotFoundException.byId(userId));
+
+        if (user.getAvatarFilename() != null) {
+            String oldAvatarPath = MinioService.Folders.AVATARS + "/" + user.getAvatarFilename();
+            minioService.deleteFile(oldAvatarPath);
+
+            user.setAvatarFilename(null);
+            userRepository.save(user);
+
+            log.info("Avatar deleted for user {}", userId);
         }
     }
 
