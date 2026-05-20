@@ -25,7 +25,7 @@ public class ArticleRestController {
 
     private final ArticleService articleService;
 
-    @GetMapping//todo: popularity
+    @GetMapping
     public ResponseEntity<List<ArticleShortResponse>> findArticles(@RequestParam(required = false, defaultValue = "0") int page,
                                                    @RequestParam(required = false, defaultValue = "20") int size,
                                                    @RequestParam(required = false, defaultValue = "createdAt") String sortBy,

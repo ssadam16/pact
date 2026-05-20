@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface ArticleLikeRepository extends JpaRepository<ArticleLike, ArticleLike.ArticleLikeId> {
     int countByArticleId(UUID articleId);
     boolean existsByUserIdAndArticleId(UUID userId, UUID articleId);
+
+    int countByUserId(UUID userId);
 }
