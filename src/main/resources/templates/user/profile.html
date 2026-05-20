@@ -74,8 +74,8 @@
                     </div>
 
                     <div th:if="${isMy}" class="profile-actions">
-                        <a href="/user/edit" class="btn-outline-pact-sm">
-                            <i class="bi bi-pencil-fill"></i> Редактировать
+                        <a th:href="@{/user/{username}/edit(username=${profile.username})}" class="btn-outline-pact-sm">
+                            <i class="bi bi-pencil-fill"></i> Редактировать профиль
                         </a>
                         <button type="button" class="btn-outline-pact-sm" data-bs-toggle="modal" data-bs-target="#avatarModal">
                             <i class="bi bi-camera-fill"></i> Сменить фото
