@@ -37,4 +37,6 @@ public interface ArticleRepository extends JpaRepository<Article, UUID> {
             "WHERE id = :id",
             nativeQuery = true)
     void addComment(@Param("id") UUID id);
+
+    int countByAuthorId(UUID authorId);
 }
