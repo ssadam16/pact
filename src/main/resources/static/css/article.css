@@ -105,6 +105,8 @@
     font-size: 1.1rem;
     line-height: 1.8;
     color: var(--text-primary);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .article-content h1 {
