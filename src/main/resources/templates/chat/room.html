@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link th:href="@{/css/main.css}" rel="stylesheet">
 
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5' fill='%238b5cf6'/></svg>">
+
   <meta name="_csrf" th:content="${_csrf.token}">
   <meta name="_csrf_header" th:content="${_csrf.headerName}">
 </head>
@@ -48,6 +50,21 @@
         <div class="chat-topbar-name" id="chatTopbarName">...</div>
         <div class="chat-topbar-status" id="chatTopbarStatus"></div>
       </div>
+      <button class="chat-call-btn" id="callBtn" title="Позвонить">
+        <i class="bi bi-telephone-fill"></i>
+      </button>
+      <button class="chat-call-btn chat-call-join" id="joinCallBtn" title="Присоединиться к звонку" style="display: none;">
+        <i class="bi bi-telephone-inbound-fill"></i>
+        <span>Присоединиться</span>
+      </button>
+    </div>
+
+    <div class="call-panel" id="callPanel" style="display: none;">
+      <div class="call-panel-status" id="callPanelStatus">Соединение...</div>
+      <div class="call-panel-timer" id="callPanelTimer">00:00</div>
+      <button class="call-hangup-btn" id="hangupBtn" title="Завершить звонок">
+        <i class="bi bi-telephone-x-fill"></i>
+      </button>
     </div>
 
     <div class="messages-area chat-bg-pattern" id="messagesArea"></div>
@@ -139,6 +156,26 @@
   </div>
 </div>
 
+<div class="incoming-call-modal" id="incomingCallModal" style="display: none;">
+  <div class="incoming-call-card">
+    <div class="incoming-call-icon">
+      <i class="bi bi-telephone-inbound-fill"></i>
+    </div>
+    <div class="incoming-call-title">Входящий звонок</div>
+    <div class="incoming-call-name" id="incomingCallName"></div>
+    <div class="incoming-call-actions">
+      <button class="incoming-call-accept" id="incomingAcceptBtn" title="Принять">
+        <i class="bi bi-telephone-fill"></i>
+      </button>
+      <button class="incoming-call-decline" id="incomingDeclineBtn" title="Отклонить">
+        <i class="bi bi-telephone-x-fill"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<audio id="remoteAudio" autoplay></audio>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
@@ -147,5 +184,6 @@
   window.__CURRENT_USERNAME__ = [[${username}]];
 </script>
 <script th:src="@{/js/room.js}"></script>
+<script th:src="@{/js/call.js}"></script>
 </body>
 </html>

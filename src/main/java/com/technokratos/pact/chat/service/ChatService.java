@@ -286,6 +286,18 @@ public class ChatService {
                 .build();
     }
 
+    public String getRecipientUsername(UUID chatId, UUID currentUserId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> ChatNotFoundException.byId(chatId));
+
+        if (!chat.getFirstUser().getId().equals(currentUserId)
+                && !chat.getSecondUser().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        return getChatRecipient(chat, currentUserId).getUsername();
+    }
+
     private User getChatRecipient(Chat chat, UUID currentUserId) {
         if (chat.getFirstUser().getId().equals(currentUserId)) {
             return chat.getSecondUser();

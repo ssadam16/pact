@@ -24,11 +24,11 @@ const quill = new Quill('#editor', {
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'align': [] }],
                 ['blockquote', 'code-block'],
-                ['link', 'image', 'video'],
+                ['image', 'video'],
                 ['clean']
             ],
             handlers: {
-                'image': imageHandler
+                'image': imageHandler,
             }
         }
     }
@@ -44,8 +44,8 @@ async function imageHandler() {
         const file = input.files[0];
         if (!file) return;
 
-        if (file.size > 10 * 1024 * 1024) {
-            showNotification('Файл слишком большой. Максимум 10MB', 'error');
+        if (file.size > 50 * 1024 * 1024) {
+            showNotification('Файл слишком большой. Максимум 50MB', 'error');
             return;
         }
 

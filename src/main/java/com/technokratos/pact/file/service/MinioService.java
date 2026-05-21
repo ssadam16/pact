@@ -291,8 +291,8 @@ public class MinioService {
             );
         }
 
-        if (file.getSize() > 10 * 1024 * 1024) { // 10MB
-            throw new FileValidationException("The file is too large. Maximum size: 10MB");
+        if (file.getSize() > 50 * 1024 * 1024) {
+            throw new FileValidationException("The file is too large. Maximum size: 50MB");
         }
     }
 

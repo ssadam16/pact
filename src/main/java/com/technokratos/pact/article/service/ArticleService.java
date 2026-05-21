@@ -59,7 +59,14 @@ public class ArticleService {
 
         Article article = articleMapper.toArticle(request);
 
-        String safeHtml = Jsoup.clean(request.content(), Safelist.relaxed());
+        Safelist safelist = Safelist.relaxed()
+                .addTags("iframe", "video", "source")
+                .addAttributes("iframe", "src", "frameborder", "allowfullscreen", "allow", "width", "height", "title")
+                .addAttributes("video", "controls", "width", "height", "src", "poster")
+                .addAttributes("source", "src", "type")
+                .addProtocols("iframe", "src", "http", "https");
+
+        String safeHtml = Jsoup.clean(request.content(), safelist);
         article.setContent(safeHtml);
 
         article.setAuthor(
@@ -81,6 +88,19 @@ public class ArticleService {
         log.info("Article (ID={}) is created", saved.getId());
 
         return saved.getId();
+    }
+
+    public ArticleResponse getMinArticle(UUID articleId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
+
+        ArticleResponse response = articleMapper.toArticleResponse(article);
+
+        response.getAuthor().setAvatarUrl(avatarService.getAvatarUrl(article.getAuthor().getAvatarFilename()));
+
+        log.info("Returning min Article (ID={})", articleId);
+
+        return response;
     }
 
     public ArticleResponse getArticle(UUID articleId, UUID currentUserId) {

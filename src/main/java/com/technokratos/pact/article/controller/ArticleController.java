@@ -60,6 +60,11 @@ public class ArticleController {
     @GetMapping("/{id}")
     public String articlePage(@PathVariable UUID id, Model model, @AuthenticationPrincipal UserDetailsImpl currentUser) {
 
+        if (currentUser == null) {
+            model.addAttribute("article", articleService.getMinArticle(id));
+            return "article/article";
+        }
+
         model.addAttribute("article", articleService.getArticle(id, currentUser.getId()));
         return "article/article";
     }
