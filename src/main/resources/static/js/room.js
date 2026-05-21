@@ -64,6 +64,11 @@ function connectWebSocket() {
     stompClient.debug = null;
 
     stompClient.connect({}, function () {
+        window.__STOMP_CLIENT__ = stompClient;
+        if (typeof window.__onCallSocketReady__ === 'function') {
+            window.__onCallSocketReady__(stompClient);
+        }
+
         stompClient.subscribe('/topic/chat.' + chatId, function (message) {
             const data = JSON.parse(message.body);
 
@@ -76,7 +81,6 @@ function connectWebSocket() {
                         bubble.classList.add('deleted');
                     }
                     el.classList.add('deleted');
-                    // Убираем кнопки и медиа у удалённого сообщения
                     el.querySelectorAll('.message-actions, .message-reply, .message-media, .message-edited')
                         .forEach(node => node.remove());
                 }
@@ -276,8 +280,6 @@ function sendMessage() {
     sendMessageWithMedia();
 }
 
-// ============ Голосовые сообщения ============
-
 async function startVoiceRecording() {
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
 
@@ -413,7 +415,6 @@ function cancelVoiceRecording() {
     }
 }
 
-// ============ end voice ============
 
 function deleteMessage(messageId) {
     if (!confirm('Удалить сообщение?')) return;
@@ -535,7 +536,6 @@ function buildMediaHtml(mediaList) {
                         <audio style="display: none;" preload="metadata" src="${media.fileUrl}"></audio>
                     </div>`;
         } else {
-            // DOCUMENT / OTHER — иконка + имя + размер + скачать
             return `<div class="media-item media-file">
                         ${getFileIcon(media.mediaType, media.originalName)}
                         <div class="file-info">
