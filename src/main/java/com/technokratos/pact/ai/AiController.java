@@ -19,12 +19,12 @@ public class AiController {
     public ResponseEntity<Map<String, String>> improveText(@RequestBody Map<String, String> request) {
         String text = request.get("text");
         if (text == null || text.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Текст не может быть пустым"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Text cannot be empty"));
         }
 
         String improved = openRouterClient.improveText(text);
         if (improved == null) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Ошибка обработки"));
+            return ResponseEntity.internalServerError().body(Map.of("error", "Processing error"));
         }
 
         return ResponseEntity.ok(Map.of("improvedText", improved));

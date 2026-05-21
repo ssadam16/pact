@@ -304,7 +304,7 @@ async function improveText() {
     }
 
     if (editorContent.trim().length < 50) {
-        showNotification('Текст слишком короткий (минимум 50 символов)', 'error');
+        showNotification('Текст слишком короткий (минимум 300 символов)', 'error');
         return;
     }
 
@@ -332,11 +332,11 @@ async function improveText() {
             }
             showNotification('Текст улучшен!', 'success');
         } else {
-            showNotification(data.error || 'Ошибка улучшения текста', 'error');
+            showNotification('Ошибка обработки. Попробуйте позже', 'error');
         }
     } catch (error) {
         console.error('AI error:', error);
-        showNotification('Ошибка соединения с сервером', 'error');
+        showNotification('Ошибка соединения с сервером. Попробуйте позже.', 'error');
     }
 }
 

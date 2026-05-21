@@ -127,5 +127,6 @@ external-api:
 openrouter:
   api:
     key: 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
+    url: https://openrouter.ai/api/v1/chat/completions
 
 remember-me-key: Qwerty229

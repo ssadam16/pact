@@ -21,13 +21,14 @@ import java.util.Map;
 @Slf4j
 public class OpenRouterClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${openrouter.api.key}")
     private String apiKey;
 
-    private static final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
+    @Value("${openrouter.api.url}")
+    private String openRouterUrl;
 
     public String improveText(String text) {
         HttpHeaders headers = new HttpHeaders();
@@ -37,14 +38,14 @@ public class OpenRouterClient {
         HttpEntity<Map<String, Object>> entity = getMapHttpEntity(text, headers);
 
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(API_URL, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(openRouterUrl, entity, String.class);
             JsonNode json = objectMapper.readTree(response.getBody());
 
             String improved = json.path("choices").get(0).path("message").path("content").asText();
 
             return improved.trim();
         } catch (Exception e) {
-            log.error("OpenRouter error: {}", e.getMessage());
+            log.error("OpenRouter internal error: {}", e.getMessage());
             return null;
         }
     }
