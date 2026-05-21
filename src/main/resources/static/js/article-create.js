@@ -24,11 +24,11 @@ const quill = new Quill('#editor', {
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'align': [] }],
                 ['blockquote', 'code-block'],
-                ['link', 'image', 'video'],
+                ['image', 'video'],
                 ['clean']
             ],
             handlers: {
-                'image': imageHandler
+                'image': imageHandler,
             }
         }
     }
