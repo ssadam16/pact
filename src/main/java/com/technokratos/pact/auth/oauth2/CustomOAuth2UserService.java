@@ -75,7 +75,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .providerId(userInfo.getId())
                 .email(userInfo.getEmail())
                 .username(userInfo.getEmail().split("@")[0])
-                //todo: .avatarFilename(userInfo.getImageUrl())
                 .isVerified(true)
                 .isEnabled(true)
                 .role(User.Role.USER)
@@ -86,7 +85,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private User updateExistingUser(User existingUser, OAuth2UserInfo userInfo) {
         existingUser.setUsername(userInfo.getEmail().split("@")[0]);
-        //todo: existingUser.setAvatarFilename(userInfo.getImageUrl());
         return userRepository.save(existingUser);
     }
 }

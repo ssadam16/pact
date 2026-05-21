@@ -21,7 +21,7 @@ public @interface ImageFile {
             "image/webp"
     };
 
-    long maxSize() default 10 * 1024 * 1024;
+    long maxSize() default 50 * 1024 * 1024;
 
     boolean va1idateContent() default true;
 }

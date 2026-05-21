@@ -23,13 +23,11 @@
         <li class="nav-item"><a class="nav-link nav-link-custom" href="/marketplace">Маркетплейс</a></li>
       </ul>
 
-      <!-- Неавторизованный пользователь -->
       <div th:if="!${#authorization.expression('isAuthenticated()')}" class="d-flex gap-2">
         <a href="/auth/login" class="btn-outline-pact btn-sm">Вход</a>
         <a href="/auth/register" class="btn-solid-pact btn-sm">Присоединиться</a>
       </div>
 
-      <!-- Авторизованный пользователь -->
       <div th:if="${#authorization.expression('isAuthenticated()')}" class="dropdown">
         <div th:with="userInfo=${session.authenticatedUserSessionInfo}">
           <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">

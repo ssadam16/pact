@@ -1,5 +1,3 @@
-/* new-chat.js */
-
 let foundUser = null;
 
 function searchUser() {
@@ -76,7 +74,6 @@ function createChat() {
         })
         .catch(function (r) {
             if (r.status === 400) {
-                // Chat might already exist — find it
                 findExistingChat();
             } else {
                 showError('Ошибка создания чата');
