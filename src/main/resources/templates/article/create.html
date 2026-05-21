@@ -119,13 +119,16 @@
                                 Содержание
                             </label>
                             <div id="editor"></div>
+                            <button type="button" class="btn-outline-pact-sm mt-2" onclick="improveText()">
+                                <i class="bi bi-magic"></i> Улучшить текст с помощью ИИ
+                            </button>
                             <input type="hidden" th:field="*{content}" id="content">
                             <div th:if="${#fields.hasErrors('content')}"
                                  th:errors="*{content}"
                                  class="invalid-feedback d-block small mt-1"></div>
                             <div class="form-text text-secondary-custom mt-2">
                                 <i class="bi bi-info-circle-fill"></i>
-                                Используйте панель инструментов для форматирования. Картинки загружаются автоматически.
+                                Используйте панель инструментов для форматирования.
                             </div>
                         </div>
 

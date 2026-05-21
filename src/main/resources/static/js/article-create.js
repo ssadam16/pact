@@ -295,6 +295,51 @@ function submitArticle() {
     document.getElementById('articleForm').submit();
 }
 
+async function improveText() {
+    const editorContent = quill.root.innerText;
+
+    if (!editorContent || editorContent.trim().length === 0) {
+        showNotification('Нет текста для улучшения', 'error');
+        return;
+    }
+
+    if (editorContent.trim().length < 50) {
+        showNotification('Текст слишком короткий (минимум 50 символов)', 'error');
+        return;
+    }
+
+    showNotification('ИИ обрабатывает текст...', 'info');
+
+    try {
+        const response = await fetch('/api/ai/improve', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [getCsrfHeader()]: getCsrfToken()
+            },
+            body: JSON.stringify({ text: editorContent })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.improvedText) {
+            const range = quill.getSelection();
+            if (range) {
+                quill.deleteText(0, quill.getLength());
+                quill.setText(data.improvedText);
+            } else {
+                quill.setText(data.improvedText);
+            }
+            showNotification('Текст улучшен!', 'success');
+        } else {
+            showNotification(data.error || 'Ошибка улучшения текста', 'error');
+        }
+    } catch (error) {
+        console.error('AI error:', error);
+        showNotification('Ошибка соединения с сервером', 'error');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     if (window.gamesData && Array.isArray(window.gamesData)) {
         allGames = window.gamesData;
