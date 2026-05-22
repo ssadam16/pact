@@ -10,7 +10,10 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.resilience.annotation.Retryable;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -30,6 +33,12 @@ public class OpenRouterClient {
     @Value("${openrouter.api.url}")
     private String openRouterUrl;
 
+    @Retryable(
+            value = HttpClientErrorException.TooManyRequests.class,
+            maxRetries = 5,
+            delay = 3000,
+            multiplier = 2
+    )
     public String improveText(String text) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

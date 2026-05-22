@@ -37,6 +37,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
 
+    implementation 'org.springframework.retry:spring-retry:2.0.5'
+    implementation 'org.springframework:spring-aspects:6.1.5'
+
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
