@@ -12,6 +12,7 @@ import com.technokratos.pact.article.repository.ArticleLikeRepository;
 import com.technokratos.pact.article.repository.ArticleRepository;
 import com.technokratos.pact.article.repository.ArticleTagRepository;
 import com.technokratos.pact.article.specification.ArticleSpecification;
+import com.technokratos.pact.common.config.CacheConfig;
 import com.technokratos.pact.file.service.AvatarService;
 import com.technokratos.pact.game.model.Game;
 import com.technokratos.pact.game.repository.GameRepository;
@@ -23,6 +24,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +59,9 @@ public class ArticleService {
     private final ArticleLikeRepository articleLikeRepository;
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.ARTICLES_BY_FILTERS, allEntries = true)
+    })
     public UUID create(ArticleCreateRequest request, UUID authorId) {
 
         Article article = articleMapper.toArticle(request);
@@ -90,6 +97,7 @@ public class ArticleService {
         return saved.getId();
     }
 
+    @Cacheable(value = CacheConfig.MIN_ARTICLE, key = "#articleId")
     public ArticleResponse getMinArticle(UUID articleId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -103,6 +111,7 @@ public class ArticleService {
         return response;
     }
 
+    @Cacheable(value = CacheConfig.ARTICLE, key = "#articleId + '_' + #currentUserId")
     public ArticleResponse getArticle(UUID articleId, UUID currentUserId) {
         Article article = articleRepository.findById(articleId)
                         .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -116,6 +125,12 @@ public class ArticleService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.ARTICLE, allEntries = true),
+            @CacheEvict(value = CacheConfig.MIN_ARTICLE, key = "#articleId"),
+            @CacheEvict(value = CacheConfig.LIKES_COUNT, key = "#articleId"),
+            @CacheEvict(value = CacheConfig.ARTICLES_BY_FILTERS, allEntries = true)
+    })
     public ArticleResponse likeArticle(UUID articleId, UUID userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -140,6 +155,12 @@ public class ArticleService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.ARTICLE, allEntries = true),
+            @CacheEvict(value = CacheConfig.MIN_ARTICLE, key = "#articleId"),
+            @CacheEvict(value = CacheConfig.LIKES_COUNT, key = "#articleId"),
+            @CacheEvict(value = CacheConfig.ARTICLES_BY_FILTERS, allEntries = true)
+    })
     public ArticleResponse unlikeArticle(UUID articleId, UUID userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -163,6 +184,7 @@ public class ArticleService {
         return getFullArticleResponse(updatedArticle, userId);
     }
 
+    @Cacheable(value = CacheConfig.LIKES_COUNT, key = "#articleId")
     public int getLikesCount(UUID articleId) {
         articleRepository.findById(articleId)
                 .orElseThrow(() -> ArticleNotFoundException.byId(articleId));
@@ -206,6 +228,7 @@ public class ArticleService {
         return response;
     }
 
+    @Cacheable(value = CacheConfig.ARTICLES_BY_FILTERS, key = "#filterRequest")
     public List<ArticleShortResponse> getArticlesByFilters(ArticleFilterRequest filterRequest) {
         log.info("Get article with filters: {}", filterRequest);
 

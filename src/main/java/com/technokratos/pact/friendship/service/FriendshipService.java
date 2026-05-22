@@ -61,10 +61,10 @@ public class FriendshipService {
         Friendship friendship = friendshipRepository.findById(friendshipId)
                 .orElseThrow(() -> FriendshipNotFoundException.byId(friendshipId));
 
-        friendship.setStatus(status);
-
         if(friendship.getStatus() != status) {
+            friendship.setStatus(status);
             friendshipRepository.save(friendship);
+            
             log.info("Friendship status was changed (ID={}, newStatus={})", friendshipId, status);
         } else {
             log.debug("Friendship status is already '{}'", status);
