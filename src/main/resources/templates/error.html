@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Страница ошибки в игровом сообществе Pact">
+    <meta name="theme-color" content="#0a0c10">
+    <title th:text="${error} + ' — Pact'">Ошибка — Pact</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link th:href="@{/css/main.css}" rel="stylesheet">
+
+    <style>
+        .error-container {
+            min-height: calc(100vh - 200px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .error-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 32px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error-icon i {
+            font-size: 4rem;
+            color: #f87171;
+        }
+
+        .error-code {
+            font-size: 6rem;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: -2px 0 rgba(239, 68, 68, 0.3), 2px 0 rgba(139, 92, 246, 0.3); }
+            33% { text-shadow: 2px 0 rgba(239, 68, 68, 0.3), -2px 0 rgba(139, 92, 246, 0.3); }
+            66% { text-shadow: 0 2px rgba(239, 68, 68, 0.3), 0 -2px rgba(139, 92, 246, 0.3); }
+        }
+
+        @media (max-width: 768px) {
+            .error-card {
+                padding: 2rem;
+            }
+            .error-code {
+                font-size: 4rem;
+            }
+            .error-title {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<div th:replace="~{fragment/header :: header}"></div>
+
+<main class="flex-grow-1">
+    <div class="error-container">
+        <div class="error-card">
+            <div class="error-icon" th:classappend="${status == 404} ? 'glitch-effect' : ''">
+                <i th:if="${status == 404}" class="bi bi-binoculars-fill"></i>
+                <i th:if="${status == 403}" class="bi bi-shield-lock-fill"></i>
+                <i th:if="${status == 401}" class="bi bi-door-closed-fill"></i>
+                <i th:if="${status == 500 or status == 503}" class="bi bi-bug-fill"></i>
+                <i th:if="${status == 400 or status == 409}" class="bi bi-exclamation-triangle-fill"></i>
+                <i th:unless="${status == 404 or status == 403 or status == 401 or status == 500 or status == 503 or status == 400 or status == 409}" class="bi bi-emoji-frown-fill"></i>
+            </div>
+
+            <div class="error-code" th:text="${status} ?: '400'">400</div>
+
+            <h1 class="error-title" th:text="${error} ?: 'Ошибка'">Ошибка</h1>
+
+            <p class="error-message" th:text="${message} ?: 'Что-то пошло не так...'">
+                Что-то пошло не так...
+            </p>
+
+            <div class="error-actions">
+                <a href="javascript:history.back()" class="btn-outline-pact">
+                    <i class="bi bi-arrow-left"></i> Назад
+                </a>
+                <a href="/" class="btn-solid-pact">
+                    <i class="bi bi-house"></i> На главную
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragment/footer :: footer}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const errorCode = document.querySelector('.error-code');
+        if (errorCode && errorCode.innerText === '404') {
+            errorCode.classList.add('glitch-effect');
+        }
+    });
+</script>
+</body>
+</html>
