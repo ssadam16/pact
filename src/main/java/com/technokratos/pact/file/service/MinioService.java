@@ -13,9 +13,9 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
@@ -27,20 +27,27 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class MinioService {
 
     private final MinioClient minioClient;
 
+    private final MinioClient minioPublicClient;
+
     @Value("${minio.bucket-name}")
     private String bucket;
 
     @Value("${minio.public-url-expiry}")
-    private int publicUrlExpiryDays;
+    private int publicUrlExpirySeconds;
 
     @Value("${minio.allowed-extensions}")
     private List<String> allowedExtensions;
+
+    public MinioService(MinioClient minioClient,
+                        @Qualifier("minioPublicClient") MinioClient minioPublicClient) {
+        this.minioClient = minioClient;
+        this.minioPublicClient = minioPublicClient;
+    }
 
     public static class Folders {
         public static final String AVATARS = "avatars";
@@ -88,7 +95,7 @@ public class MinioService {
 
                 log.info("Bucket '{}' was successfully created", bucket);
             } else {
-                log.info("Bucket '{}' is already exists", bucket);
+                log.info("Bucket '{}' already exists", bucket);
             }
         } catch (Exception e) {
             log.error("Error while initializing MinIO: {}", e.getMessage(), e);
@@ -101,10 +108,6 @@ public class MinioService {
         return doUpload(file, folder);
     }
 
-    /**
-     * Загрузка медиа в чат: без жёсткой проверки расширений и без 10MB-лимита,
-     * так как валидация (тип/размер до 50MB) выполняется в ChatMediaService.
-     */
     public FileInfo uploadChatFile(MultipartFile file, String folder) {
         if (file.isEmpty()) {
             throw new FileValidationException("File is empty");
@@ -131,7 +134,7 @@ public class MinioService {
                             .build()
             );
 
-            log.info("File '{}' was successfully uploaded to '{}'", originalFilename, objectName);
+            log.info("File '{}' uploaded to '{}'", originalFilename, objectName);
 
             return FileInfo.builder()
                     .originalName(originalFilename)
@@ -150,16 +153,38 @@ public class MinioService {
 
     public String getFileUrl(String filePath) {
         try {
-            return minioClient.getPresignedObjectUrl(
+            return minioPublicClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(bucket)
                             .object(filePath)
-                            .expiry(publicUrlExpiryDays)
+                            .expiry(publicUrlExpirySeconds, TimeUnit.SECONDS)
                             .build()
             );
         } catch (Exception e) {
             log.error("Error while getting URL for file '{}': {}", filePath, e.getMessage());
+            return null;
+        }
+    }
+
+    public String getFileUrl(String filename, String folder) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+
+        try {
+            String objectPath = "%s/%s".formatted(folder, filename);
+
+            return minioPublicClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(bucket)
+                            .object(objectPath)
+                            .expiry(7, TimeUnit.DAYS)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Error generating file URL for {}: {}", filename, e.getMessage());
             return null;
         }
     }
@@ -205,7 +230,7 @@ public class MinioService {
                             .object(filePath)
                             .build()
             );
-            log.info("File '{}' was successfully deleted", filePath);
+            log.info("File '{}' deleted", filePath);
         } catch (Exception e) {
             log.error("Error while deleting file '{}': {}", filePath, e.getMessage());
             throw new FileDeleteException("Cannot delete the file", e);
@@ -269,7 +294,7 @@ public class MinioService {
         baseName = baseName.replaceAll("[^a-zA-Z0-9-_]", "");
 
         String timestamp = String.valueOf(System.currentTimeMillis());
-        String uuid = UUID.randomUUID().toString().substring(0,8);
+        String uuid = UUID.randomUUID().toString().substring(0, 8);
 
         return "%s_%s_%s.%s".formatted(baseName, timestamp, uuid, extension);
     }
@@ -316,28 +341,5 @@ public class MinioService {
             result.append(translitMap.getOrDefault(c, String.valueOf(c)));
         }
         return result.toString();
-    }
-
-    public String getFileUrl(String filename, String folder) {
-        if (filename == null || filename.isBlank()) {
-            return null;
-        }
-
-        try {
-            String objectPath = "%s/%s".formatted(folder, filename);
-
-            return minioClient.getPresignedObjectUrl(
-                    GetPresignedObjectUrlArgs.builder()
-                            .method(Method.GET)
-                            .bucket(bucket)
-                            .object(objectPath)
-                            .expiry(7, TimeUnit.DAYS)
-                            .build()
-            );
-
-        } catch (Exception e) {
-            log.error("Error generating file URL for {}: {}", filename, e.getMessage());
-            return null;
-        }
     }
 }

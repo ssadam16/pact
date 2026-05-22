@@ -13,6 +13,9 @@ public class MinioConfig {
     @Value("${minio.endpoint}")
     private String endpoint;
 
+    @Value("${minio.public-endpoint}")
+    private String publicEndpoint;
+
     @Value("${minio.access-key}")
     private String accessKey;
 
@@ -38,13 +41,23 @@ public class MinioConfig {
     }
 
     @Bean
+    public MinioClient minioPublicClient() {
+        return MinioClient.builder()
+                .endpoint(publicEndpoint)
+                .credentials(accessKey, secretKey)
+                .region(region)
+                .build();
+    }
+
+    @Bean
     public MinioProperties minioProperties() {
-        return new MinioProperties(endpoint, accessKey, secretKey,
+        return new MinioProperties(endpoint, publicEndpoint, accessKey, secretKey,
                 region, secure, bucket);
     }
 
     public record MinioProperties(
             String endpoint,
+            String publicEndpoint,
             String accessKey,
             String secretKey,
             String region,
