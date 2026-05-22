@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "Game API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get All Games",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8080/api/games"
+      }
+    },
+    {
+      "name": "Get Game By ID",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8080/api/games/{{gameId}}"
+      }
+    },
+    {
+      "name": "Create Game",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8080/api/games",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cyberpunk 2077\",\n  \"developer\": \"CD Projekt Red\",\n  \"steamLink\": \"https://store.steampowered.com/app/1091500/Cyberpunk_2077/\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Update Game",
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:8080/api/games/{{gameId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Cyberpunk 2077: Phantom Liberty\",\n  \"developer\": \"CD Projekt Red\",\n  \"steamLink\": \"https://store.steampowered.com/app/1091500/Cyberpunk_2077/\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Delete Game",
+      "request": {
+        "method": "DELETE",
+        "url": "http://localhost:8080/api/games/{{gameId}}"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "gameId",
+      "value": "123e4567-e89b-12d3-a456-426614174000"
+    }
+  ]
+}
